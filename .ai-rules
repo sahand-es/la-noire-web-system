@@ -1,0 +1,186 @@
+# AI Rules for Django Project
+
+## Design Principles
+- Keep it simple and minimal. Do not over-engineer solutions.
+- Prefer Django's built-in features over external packages when possible.
+- Follow Django's "batteries included" philosophy.
+- Avoid premature optimization.
+
+## Project Structure
+- Use `config/` for project-level settings (settings.py, urls.py, wsgi.py, asgi.py)
+- Use `core/` app for shared models, utilities, and base classes
+- Create new apps only when there's a clear domain separation
+- Keep apps focused and cohesive
+
+## Model Definition
+- All models should inherit from `core.models.BaseModel` for timestamps
+- Use meaningful field names and appropriate field types
+- Add `__str__` methods to models for better admin representation
+- Use `related_name` for ForeignKey and ManyToMany relationships
+- Keep models simple - avoid complex business logic in models
+
+Example:
+```python
+from core.models import BaseModel
+
+class MyModel(BaseModel):
+    name = models.CharField(max_length=100)
+    
+    def __str__(self):
+        return self.name
+```
+
+## Code Style
+- Do not over-comment. Only add function-level docstrings when necessary.
+- No inline comments explaining obvious code
+- Keep functions small and focused
+- Use descriptive variable and function names instead of comments
+- Follow PEP 8 style guide
+
+## Django Best Practices
+- Use class-based views when appropriate, function-based views for simple cases
+- Keep views thin - move business logic to services or model methods
+- Use Django's ORM efficiently - avoid N+1 queries
+- Register models in admin.py for models that need admin interface
+- Use migrations for all database changes
+
+## Admin Interface
+- Register models in admin.py with minimal configuration
+- Only customize admin if necessary
+- Use `list_display`, `list_filter`, `search_fields` when helpful
+
+## API/Views
+- Use Django REST Framework for all API endpoints
+- Keep views simple and focused
+- Return appropriate HTTP status codes
+- Handle errors gracefully
+- Implement proper permission checks for each endpoint
+- Use serializers for request/response validation
+
+## REST API Design
+- Follow RESTful conventions strictly
+- Use appropriate HTTP methods: GET (read), POST (create), PUT/PATCH (update), DELETE (delete)
+- Use plural nouns for resource names: `/api/users/`, `/api/items/`, `/api/products/`
+- Use nested resources when appropriate: `/api/users/{id}/orders/`
+- Return consistent JSON response format
+- Include proper error messages in error responses
+- Use status codes correctly: 200 (success), 201 (created), 400 (bad request), 401 (unauthorized), 403 (forbidden), 404 (not found), 500 (server error)
+
+## CRUD Endpoints
+- Create only necessary CRUD endpoints - not more, not less
+- Each model that needs management should have: list, create, retrieve, update, delete endpoints
+- Use ViewSets when appropriate for standard CRUD operations
+- Custom actions should use `@action` decorator in ViewSets
+- Group related endpoints logically
+
+## Entity Models
+Model design principles:
+- Design models accurately based on domain requirements
+- Use appropriate relationships (ForeignKey, ManyToMany, OneToOne)
+- Add status fields where workflow states are needed
+- Include necessary fields for statistics and reporting
+- Keep models normalized but practical
+- Consider User/Profile models with role support when needed
+
+## Role-Based Access Control (RBAC)
+- Implement role-based permissions using Django's permission system
+- Roles must be configurable without code changes (database-driven)
+- Use Django's Group model or custom Role model for role management
+- Create/update/delete roles via API endpoints
+- Assign permissions to roles dynamically
+- Check permissions in views/permissions classes
+- Use DRF permissions classes: `IsAuthenticated`, custom permission classes
+- Each endpoint must verify user's role and permissions before processing
+
+Example permission check:
+```python
+from rest_framework.permissions import BasePermission
+
+class HasRequiredRole(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.groups.filter(name='required_role').exists()
+```
+
+## Authentication & Authorization
+- Implement user registration endpoint
+- Implement login endpoint (return JWT token or session)
+- Use Django's authentication system
+- Protect all endpoints with authentication except registration/login
+- Return 401 for unauthenticated requests
+- Return 403 for unauthorized requests (wrong role/permission)
+
+## Process Endpoints
+Process endpoint guidelines:
+- Each business process should have a dedicated endpoint
+- Process endpoints may update multiple related entities
+- Use custom actions with `@action` decorator for process endpoints
+- Return appropriate status and messages
+- Validate business rules before processing
+- Handle edge cases and errors gracefully
+- Process endpoints should be idempotent when possible
+
+## Statistics Endpoints
+- Create endpoints for aggregated statistics
+- Create endpoints for overall statistics
+- Use Django ORM aggregations (Count, Sum, Avg, etc.)
+- Optimize queries to avoid N+1 problems
+- Return statistics in clear JSON format
+- Group statistics by relevant dimensions (date, status, role, etc.)
+
+## Testing
+- Write tests for critical business logic
+- Use Django's TestCase for model and view tests
+- Keep tests simple and readable
+
+## Dependencies
+- Only add packages when absolutely necessary
+- Prefer well-maintained, widely-used packages
+- Keep requirements.txt minimal
+
+## Database
+- Use PostgreSQL (configured via docker-compose)
+- Run migrations for all schema changes
+- Do not modify migrations manually after they've been applied
+
+## API Response Format
+- Use consistent response structure across all endpoints
+- Success responses should include data and status
+- Error responses should include error message and status code
+- Use DRF's standard response format or custom format consistently
+
+Example success:
+```json
+{
+  "status": "success",
+  "data": {...}
+}
+```
+
+Example error:
+```json
+{
+  "status": "error",
+  "message": "Error description",
+  "code": 400
+}
+```
+
+## Access Control Implementation
+- Every API endpoint must check user authentication
+- Every API endpoint must check user's role and permissions
+- Return 401 for missing/invalid authentication
+- Return 403 for insufficient permissions
+- Log access attempts for security auditing
+- Use DRF's permission classes consistently
+
+## General Guidelines
+- Write code as if a human developer would write it - natural and straightforward
+- Avoid AI-typical patterns like excessive type hints, over-documentation, or overly defensive code
+- Prefer explicit over implicit, but don't be verbose
+- When in doubt, choose the simpler solution
+- Maintain consistency with existing codebase style
+- Focus on meeting the requirements exactly - not more, not less
+- Ensure all endpoints are functional and properly secured
+- Test endpoints with appropriate access levels before considering complete
+- Keep business logic separate from views - use services or model methods
+
