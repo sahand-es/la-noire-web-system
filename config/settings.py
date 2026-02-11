@@ -54,7 +54,7 @@ DATABASES = {
         'USER': 'postgres',
         'PASSWORD': 'postgres',
         'HOST': 'localhost',
-        'PORT': '5432', # 5433?
+        'PORT': '5433', # 5433?
     }
 }
 
@@ -92,3 +92,5 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
 }
 
+
+AUTH_USER_MODEL = 'core.UserProfile'
