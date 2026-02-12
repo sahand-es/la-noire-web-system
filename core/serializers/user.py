@@ -1,7 +1,10 @@
-from rest_framework import serializers
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import UserProfile, Role
+from rest_framework import serializers
+
+from core.models import Role, UserProfile
+
+User = get_user_model()
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -160,3 +163,4 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is incorrect.")
         return value
+

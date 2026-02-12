@@ -6,18 +6,13 @@ from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import login, logout
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
-from .serializers import (
+from ..serializers.user import (
     UserRegistrationSerializer,
     UserLoginSerializer,
     UserProfileSerializer,
     ChangePasswordSerializer
 )
-from .models import UserProfile
-
-def index(request):
-    return HttpResponse("Hello, world.")
-
-
+from ..models import UserProfile
 
 
 
