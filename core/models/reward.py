@@ -9,6 +9,7 @@ from .user import UserProfile
 
 class RewardStatus(models.TextChoices):
     PENDING = 'PENDING', 'Pending'
+    PENDING_DETECTIVE = 'PENDING_DETECTIVE', 'Pending Detective Review'
     APPROVED = 'APPROVED', 'Approved'
     READY_FOR_PAYMENT = 'READY_FOR_PAYMENT', 'Ready for Payment'
     PAID = 'PAID', 'Paid'
@@ -95,7 +96,22 @@ class Reward(BaseModel):
         help_text="True if reward is for a civilian informant"
     )
 
-    # Approval workflow
+    # Officer initial review (valid -> send to detective; invalid -> reject)
+    officer_reviewed_by = models.ForeignKey(
+        UserProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rewards_officer_reviewed',
+        verbose_name="Officer Reviewed By"
+    )
+    officer_reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Officer Reviewed At"
+    )
+
+    # Detective approval (approve -> user gets unique code; reject)
     approved_by = models.ForeignKey(
         UserProfile,
         on_delete=models.SET_NULL,

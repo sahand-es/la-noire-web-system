@@ -21,11 +21,13 @@ from .views.case_resolution import (
     DetectiveReportViewSet,
     NotificationViewSet,
 )
+from .views.reward import RewardViewSet
 
 router = DefaultRouter()
 router.register(r'cases', CaseViewSet, basename='case')
 router.register(r'complaints', ComplaintViewSet, basename='complaint')
 router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'rewards', RewardViewSet, basename='reward')
 
 app_name = 'core'
 
