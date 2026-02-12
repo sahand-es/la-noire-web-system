@@ -11,6 +11,9 @@ from .models import (
     VehicleEvidence,
     DocumentEvidence,
     OtherEvidence,
+    EvidenceLink,
+    DetectiveReport,
+    Notification,
     Suspect,
     Interrogation,
     Trial,
@@ -78,6 +81,24 @@ class DocumentEvidenceAdmin(admin.ModelAdmin):
 @admin.register(OtherEvidence)
 class OtherEvidenceAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(EvidenceLink)
+class EvidenceLinkAdmin(admin.ModelAdmin):
+    list_display = ['id', 'case', 'from_object_id', 'to_object_id', 'created_by', 'created_at']
+    list_filter = ['case', 'created_at']
+
+
+@admin.register(DetectiveReport)
+class DetectiveReportAdmin(admin.ModelAdmin):
+    list_display = ['id', 'case', 'detective', 'status', 'sergeant', 'submitted_at']
+    list_filter = ['status', 'submitted_at']
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'case', 'recipient', 'read_at', 'created_at']
+    list_filter = ['read_at', 'created_at']
 
 
 @admin.register(Suspect)

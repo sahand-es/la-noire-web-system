@@ -14,6 +14,12 @@ from .trial import Trial, TrialStatus, TrialVerdict
 from .reward import Reward, TeamReward, RewardStatus, RewardType
 from .document import Document
 from .payment import Payment, Bail
+from .case_resolution import (
+    EvidenceLink,
+    DetectiveReport,
+    DetectiveReportStatus,
+    Notification,
+)
 
 __all__ = [
     'BaseModel',
@@ -46,5 +52,9 @@ __all__ = [
     'Document',
     'Payment',
     'Bail',
+    'EvidenceLink',
+    'DetectiveReport',
+    'DetectiveReportStatus',
+    'Notification',
 ]
 

@@ -27,6 +27,12 @@ class BaseEvidence(BaseModel):
         related_name='%(class)s_set',
         verbose_name="Related Case"
     )
+    title = models.CharField(
+        max_length=255,
+        default='',
+        blank=True,
+        verbose_name="Title"
+    )
     evidence_number = models.CharField(
         max_length=50,
         unique=True,
@@ -168,7 +174,24 @@ class BiologicalEvidence(BaseEvidence):
     )
     lab_results = models.TextField(
         blank=True,
-        verbose_name="Lab Results"
+        verbose_name="Lab Results / Follow-up Result"
+    )
+    coroner_approved = models.BooleanField(
+        default=False,
+        verbose_name="Coroner Approved"
+    )
+    coroner_approved_by = models.ForeignKey(
+        UserProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coroner_approved_evidence',
+        verbose_name="Approved By (Coroner)"
+    )
+    coroner_approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Coroner Approval Date"
     )
     lab_result_date = models.DateTimeField(
         null=True,
@@ -267,6 +290,15 @@ class VehicleEvidence(BaseEvidence):
 
     def __str__(self):
         return f"{self.evidence_number} - {self.vehicle_type}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        has_plate = bool(self.license_plate and self.license_plate.strip())
+        has_serial = bool(self.vin_number and self.vin_number.strip())
+        if has_plate and has_serial:
+            raise ValidationError(
+                'License plate and serial number (VIN) cannot both be set.'
+            )
 
 
 
