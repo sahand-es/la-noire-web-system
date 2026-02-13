@@ -60,9 +60,14 @@ class CaseResolutionFlowTestCase(TestCase):
             assigned_detective=self.detective,
         )
 
-    def _case_url(self, path=''):
-        base = f'/core/cases/{self.case.id}'
+    def _investigation_url(self, path=''):
+        """URL for investigation resources (evidence-links, detective-reports) under /core/investigation/cases/<id>/."""
+        base = f'/core/investigation/cases/{self.case.id}'
         return f'{base}/{path}' if path else base
+
+    def _case_evidence_url(self, path):
+        """URL for case evidence (cases app) e.g. other-evidence."""
+        return f'/core/cases/{self.case.id}/{path}'
 
     def test_detective_creates_evidence_link_red_line(self):
         """Detective can connect related documents/evidence with a red line (evidence link)."""
@@ -102,7 +107,7 @@ class CaseResolutionFlowTestCase(TestCase):
             'to_content_type_id': ct_o.id,
             'to_object_id': other.id,
         }
-        resp = self.client.post(self._case_url('evidence-links/'), payload, format='json')
+        resp = self.client.post(self._investigation_url('evidence-links/'), payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertIn('data', resp.data)
         self.assertEqual(EvidenceLink.objects.filter(case=self.case).count(), 1)
@@ -150,7 +155,7 @@ class CaseResolutionFlowTestCase(TestCase):
         )
         ct = ContentType.objects.get_for_model(OtherEvidence)
         self.client.force_authenticate(user=self.detective)
-        resp = self.client.post(self._case_url('evidence-links/'), {
+        resp = self.client.post(self._investigation_url('evidence-links/'), {
             'from_content_type_id': ct.id,
             'from_object_id': other_ev.id,
             'to_content_type_id': ct.id,
@@ -162,7 +167,7 @@ class CaseResolutionFlowTestCase(TestCase):
     def test_detective_submits_report_waits_for_approval(self):
         """Detective reports to sergeant; report is PENDING_SERGEANT until sergeant reviews."""
         self.client.force_authenticate(user=self.detective)
-        resp = self.client.post(self._case_url('detective-reports/'), {}, format='json')
+        resp = self.client.post(self._investigation_url('detective-reports/'), {}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         data = resp.data.get('data', resp.data)
         self.assertEqual(data['status'], DetectiveReportStatus.PENDING_SERGEANT)
@@ -182,7 +187,7 @@ class CaseResolutionFlowTestCase(TestCase):
         )
         self.client.force_authenticate(user=self.sergeant)
         resp = self.client.post(
-            self._case_url(f'detective-reports/{report.id}/sergeant-reviews/'),
+            self._investigation_url(f'detective-reports/{report.id}/sergeant-reviews/'),
             {'action': 'approve', 'message': 'Proceed with arrest.'},
             format='json',
         )
@@ -202,7 +207,7 @@ class CaseResolutionFlowTestCase(TestCase):
         )
         self.client.force_authenticate(user=self.sergeant)
         resp = self.client.post(
-            self._case_url(f'detective-reports/{report.id}/sergeant-reviews/'),
+            self._investigation_url(f'detective-reports/{report.id}/sergeant-reviews/'),
             {'action': 'disagree', 'message': 'Reasoning does not match suspect records.'},
             format='json',
         )
@@ -219,7 +224,7 @@ class CaseResolutionFlowTestCase(TestCase):
         other_detective = make_user('detective_other')
         other_detective.roles.add(self.role_detective)
         self.client.force_authenticate(user=other_detective)
-        resp = self.client.post(self._case_url('detective-reports/'), {}, format='json')
+        resp = self.client.post(self._investigation_url('detective-reports/'), {}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn('Only the assigned detective', resp.data.get('message', ''))
 
@@ -235,7 +240,7 @@ class CaseResolutionFlowTestCase(TestCase):
             'physical_description': 'P',
             'condition': 'Good',
         }
-        resp = self.client.post(self._case_url('other-evidence/'), payload, format='json')
+        resp = self.client.post(self._case_evidence_url('other-evidence/'), payload, format='json')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(
             Notification.objects.filter(case=self.case, recipient=self.detective).count(),

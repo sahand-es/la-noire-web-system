@@ -4,6 +4,6 @@ app_name = 'core'
 
 urlpatterns = [
     path('', include('cases.urls')),
-    path('', include('investigation.urls')),
+    path('investigation/', include('investigation.urls')),
     path('', include('rewards.urls')),
 ]

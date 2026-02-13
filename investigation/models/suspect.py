@@ -270,6 +270,45 @@ class SuspectCaseLink(BaseModel):
         help_text="How suspect was identified"
     )
     notes = models.TextField(blank=True, verbose_name="Case-Specific Notes")
+    # Captain's final opinion (after detective and sergeant scores); required for chief approval on critical cases
+    captain_opinion = models.TextField(
+        blank=True,
+        verbose_name="Captain Final Opinion",
+        help_text="Captain's final opinion with statements, documents, and scores"
+    )
+    captain = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='suspect_case_opinions',
+        verbose_name="Captain"
+    )
+    captain_opinion_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Captain Opinion Date"
+    )
+    # For critical crimes: police chief must approve or reject captain's opinion
+    chief_approved = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name="Chief Approved",
+        help_text="True=approved, False=rejected; null=pending or not required (non-critical)"
+    )
+    chief = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='suspect_case_chief_reviews',
+        verbose_name="Police Chief"
+    )
+    chief_approval_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Chief Approval Date"
+    )
 
     class Meta:
         verbose_name = "Suspect Case Link"
@@ -292,6 +331,16 @@ class SuspectCaseLink(BaseModel):
     @property
     def has_both_assessments(self):
         return self.detective_guilt_score is not None and self.sergeant_guilt_score is not None
+
+    @property
+    def is_critical_case(self):
+        from cases.models import CasePriority
+        return self.case.priority == CasePriority.CRITICAL
+
+    @property
+    def requires_chief_approval(self):
+        """In critical crimes, police chief must approve or reject captain's opinion."""
+        return self.is_critical_case and bool(self.captain_opinion.strip() if self.captain_opinion else False)
 
 
 class InterrogationStatus(models.TextChoices):
