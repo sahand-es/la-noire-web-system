@@ -22,6 +22,30 @@ from investigation.serializers.case_resolution import (
 )
 from core.permissions import IsDetective, IsSergeant, IsDetectiveOrSergeantOrChief
 
+# Evidence model names that can be linked on the Detective Board (must have case_id)
+EVIDENCE_MODEL_NAMES = {
+    'witnesstestimony', 'biologicalevidence', 'vehiclevidence',
+    'documentevidence', 'otherevidence',
+}
+
+
+def _evidence_object_belongs_to_case(content_type_id, object_id, case):
+    """Return True if the object exists and is evidence belonging to this case."""
+    try:
+        ct = ContentType.objects.get(pk=content_type_id)
+    except ContentType.DoesNotExist:
+        return False
+    if ct.model not in EVIDENCE_MODEL_NAMES:
+        return False
+    model_class = ct.model_class()
+    if not model_class or not hasattr(model_class, 'case_id'):
+        return False
+    try:
+        obj = model_class.objects.get(pk=object_id)
+    except (model_class.DoesNotExist, ValueError):
+        return False
+    return getattr(obj, 'case_id', None) == case.pk
+
 
 class EvidenceLinkViewSet(viewsets.ModelViewSet):
     serializer_class = EvidenceLinkSerializer
@@ -41,12 +65,23 @@ class EvidenceLinkViewSet(viewsets.ModelViewSet):
         case = get_object_or_404(Case, pk=self.kwargs['case_pk'])
         ser = EvidenceLinkCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+        if not _evidence_object_belongs_to_case(data['from_content_type_id'], data['from_object_id'], case):
+            return Response(
+                {'status': 'error', 'message': 'From evidence must belong to this case.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not _evidence_object_belongs_to_case(data['to_content_type_id'], data['to_object_id'], case):
+            return Response(
+                {'status': 'error', 'message': 'To evidence must belong to this case.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         link = EvidenceLink.objects.create(
             case=case,
-            from_content_type_id=ser.validated_data['from_content_type_id'],
-            from_object_id=ser.validated_data['from_object_id'],
-            to_content_type_id=ser.validated_data['to_content_type_id'],
-            to_object_id=ser.validated_data['to_object_id'],
+            from_content_type_id=data['from_content_type_id'],
+            from_object_id=data['from_object_id'],
+            to_content_type_id=data['to_content_type_id'],
+            to_object_id=data['to_object_id'],
             created_by=request.user,
         )
         return Response(
