@@ -145,34 +145,55 @@ class Suspect(BaseModel):
     def is_detained(self):
         return self.status == SuspectStatus.DETAINED
 
+    # Crime degree Di: 1-4 for level 3 to critical
+    _PRIORITY_TO_DEGREE = {'LEVEL3': 1, 'LEVEL2': 2, 'LEVEL1': 3, 'CRITICAL': 4}
+
     @property
     def highest_crime_level(self):
         case_links = self.case_links.select_related('case').all()
         if not case_links:
             return None
-        level_map = {'LEVEL_3': 3, 'LEVEL_2': 2, 'LEVEL_1': 1, 'CRITICAL': 0}
+        level_map = {'LEVEL3': 3, 'LEVEL2': 2, 'LEVEL1': 1, 'CRITICAL': 0}
         return min(
             (level_map.get(link.case.priority, 4) for link in case_links),
             default=None
         )
 
-    def get_pursuit_priority(self):
+    def _pursuit_max_days_and_degree(self):
+        """Return (max_days_Lj, max_degree_Di) for open cases under pursuit. (PROJECT 310-313)."""
         from django.utils import timezone
-        case_links = self.case_links.select_related('case').all()
-        if not case_links or not self.is_wanted:
-            return 0
-        level_map = {'CRITICAL': 4, 'LEVEL_1': 3, 'LEVEL_2': 2, 'LEVEL_3': 1}
-        max_level = max(
-            level_map.get(link.case.priority, 0)
+        case_links = self.case_links.select_related('case').filter(
+            case__status__in=['OPEN', 'UNDER_INVESTIGATION']
+        )
+        if not case_links or not self.pursuit_start_date or not self.is_wanted:
+            return 0, 0
+        now = timezone.now()
+        max_days = (now - self.pursuit_start_date).days
+        max_degree = max(
+            self._PRIORITY_TO_DEGREE.get(link.case.priority, 0)
             for link in case_links
         )
-        max_days = 0
-        if self.pursuit_start_date:
-            for link in case_links:
-                if link.case.status in ['OPEN', 'UNDER_INVESTIGATION']:
-                    days = (timezone.now() - self.pursuit_start_date).days
-                    max_days = max(max_days, days)
-        return max_level * max_days
+        return max_days, max_degree
+
+    @property
+    def days_under_pursuit(self):
+        """Maximum days a crime in an open case has been under pursuit (Lj)."""
+        max_days, _ = self._pursuit_max_days_and_degree()
+        return max_days
+
+    @property
+    def is_intensive_pursuit(self):
+        """True if under pursuit for more than one month (PROJECT 308)."""
+        return self.is_wanted and self.days_under_pursuit >= 30
+
+    def get_pursuit_priority(self):
+        """Ranking: max(Lj) · max(Di) for Intensive Pursuit page (PROJECT Note 1)."""
+        max_days, max_degree = self._pursuit_max_days_and_degree()
+        return max_days * max_degree
+
+    def get_reward_rials(self):
+        """Reward for information (Rials): max(Lj) · max(Di) · 20,000,000 (PROJECT 315-316)."""
+        return self.get_pursuit_priority() * 20_000_000
 
     def mark_as_wanted(self):
         from django.utils import timezone

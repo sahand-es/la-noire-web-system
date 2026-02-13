@@ -4,12 +4,14 @@ from rest_framework.routers import DefaultRouter
 from .views.case_resolution import EvidenceLinkViewSet, DetectiveReportViewSet, NotificationViewSet
 from .views.suspect import SuspectCaseLinkViewSet
 from .views.trial import TrialViewSet
+from .views.intensive_pursuit import IntensivePursuitViewSet
 
 # All under /core/investigation/ (see core/urls.py). Case resources: cases/<case_pk>/...
 P = 'cases/<int:case_pk>'
 
 router = DefaultRouter()
 router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'intensive-pursuit', IntensivePursuitViewSet, basename='intensive-pursuit')
 
 app_name = 'investigation'
 

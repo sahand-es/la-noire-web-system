@@ -1,7 +1,30 @@
 from rest_framework import serializers
 from django.utils import timezone
 
-from investigation.models import SuspectCaseLink
+from investigation.models import SuspectCaseLink, Suspect
+
+
+class IntensivePursuitSerializer(serializers.ModelSerializer):
+    """Suspect on Intensive Pursuit page: photo and details, ranking, reward (PROJECT 307-316)."""
+    full_name = serializers.CharField(read_only=True)
+    ranking = serializers.SerializerMethodField()
+    reward_rials = serializers.SerializerMethodField()
+    days_under_pursuit = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Suspect
+        fields = [
+            'id', 'first_name', 'last_name', 'full_name', 'national_id',
+            'photo', 'date_of_birth', 'phone_number', 'address',
+            'status', 'pursuit_start_date', 'days_under_pursuit',
+            'ranking', 'reward_rials', 'created_at',
+        ]
+
+    def get_ranking(self, obj):
+        return obj.get_pursuit_priority()
+
+    def get_reward_rials(self, obj):
+        return obj.get_reward_rials()
 
 
 class SuspectCaseLinkSerializer(serializers.ModelSerializer):
