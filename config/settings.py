@@ -10,6 +10,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'cases',
+    'investigation',
     'core',
     'accounts',
     'django.contrib.admin',

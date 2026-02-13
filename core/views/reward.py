@@ -9,7 +9,8 @@ from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
 from core.models import Reward, RewardStatus
-from cases.models import Case, Notification
+from cases.models import Case
+from investigation.models import Notification
 from core.serializers.reward import (
     RewardCreateSerializer,
     RewardListSerializer,
@@ -169,7 +170,7 @@ class RewardViewSet(viewsets.ModelViewSet):
         reward.save()
 
         try:
-            from cases.models import Notification
+            from investigation.models import Notification
             Notification.objects.get_or_create(
                 case=reward.case,
                 recipient=reward.recipient,

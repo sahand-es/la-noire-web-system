@@ -9,5 +9,6 @@ app_name = 'core'
 
 urlpatterns = [
     path('', include('cases.urls')),
+    path('', include('investigation.urls')),
     path('', include(router.urls)),
 ]

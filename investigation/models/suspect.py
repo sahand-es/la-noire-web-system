@@ -1,8 +1,9 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
-from .base import BaseModel
-from .user import UserProfile
+from django.conf import settings
+
+from core.models import BaseModel
 
 
 class SuspectStatus(models.TextChoices):
@@ -17,108 +18,65 @@ class SuspectStatus(models.TextChoices):
 
 
 class Suspect(BaseModel):
-    """
-    Suspect model for tracking individuals suspected of crimes.
-    Suspects can be under pursuit for multiple cases simultaneously.
-    """
-
-    # Personal Information
-    first_name = models.CharField(
-        max_length=100,
-        verbose_name="First Name"
-    )
-
-    last_name = models.CharField(
-        max_length=100,
-        verbose_name="Last Name"
-    )
-
+    first_name = models.CharField(max_length=100, verbose_name="First Name")
+    last_name = models.CharField(max_length=100, verbose_name="Last Name")
     national_id = models.CharField(
         max_length=10,
         unique=True,
         verbose_name="National ID",
         help_text="10-digit national identification number"
     )
-
-    date_of_birth = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name="Date of Birth"
-    )
-
-    phone_number = models.CharField(
-        max_length=11,
-        blank=True,
-        verbose_name="Phone Number"
-    )
-
-    address = models.TextField(
-        blank=True,
-        verbose_name="Address"
-    )
-
+    date_of_birth = models.DateField(null=True, blank=True, verbose_name="Date of Birth")
+    phone_number = models.CharField(max_length=11, blank=True, verbose_name="Phone Number")
+    address = models.TextField(blank=True, verbose_name="Address")
     photo = models.ImageField(
         upload_to='suspects/photos/',
         null=True,
         blank=True,
         verbose_name="Photo"
     )
-
-    # Case Relations
     cases = models.ManyToManyField(
         'cases.Case',
         through='SuspectCaseLink',
         related_name='suspects',
         verbose_name="Related Cases"
     )
-
-    # Status
     status = models.CharField(
         max_length=30,
         choices=SuspectStatus.choices,
         default=SuspectStatus.IDENTIFIED,
         verbose_name="Status"
     )
-
-    # Pursuit Information
     is_wanted = models.BooleanField(
         default=False,
         verbose_name="Is Wanted",
         help_text="True if suspect is actively wanted"
     )
-
     pursuit_start_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Pursuit Start Date"
     )
-
     capture_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Capture Date"
     )
-
-    # Detention Information
     detention_location = models.CharField(
         max_length=200,
         blank=True,
         verbose_name="Detention Location"
     )
-
     detention_start_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Detention Start Date"
     )
-
     detention_end_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Detention End Date"
     )
-
-    # Bail Information (for level 2 & 3 crimes)
     bail_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -126,19 +84,12 @@ class Suspect(BaseModel):
         blank=True,
         verbose_name="Bail Amount"
     )
-
-    bail_paid = models.BooleanField(
-        default=False,
-        verbose_name="Bail Paid"
-    )
-
+    bail_paid = models.BooleanField(default=False, verbose_name="Bail Paid")
     bail_payment_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Bail Payment Date"
     )
-
-    # Fine Information (for level 3 crimes)
     fine_amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -146,28 +97,14 @@ class Suspect(BaseModel):
         blank=True,
         verbose_name="Fine Amount"
     )
-
-    fine_paid = models.BooleanField(
-        default=False,
-        verbose_name="Fine Paid"
-    )
-
+    fine_paid = models.BooleanField(default=False, verbose_name="Fine Paid")
     fine_payment_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Fine Payment Date"
     )
-
-    # Additional Information
-    criminal_history = models.TextField(
-        blank=True,
-        verbose_name="Criminal History"
-    )
-
-    notes = models.TextField(
-        blank=True,
-        verbose_name="Notes"
-    )
+    criminal_history = models.TextField(blank=True, verbose_name="Criminal History")
+    notes = models.TextField(blank=True, verbose_name="Notes")
 
     class Meta:
         verbose_name = "Suspect"
@@ -185,24 +122,13 @@ class Suspect(BaseModel):
 
     def clean(self):
         if len(self.national_id) != 10:
-            raise ValidationError({
-                'national_id': 'National ID must be exactly 10 digits.'
-            })
-
+            raise ValidationError({'national_id': 'National ID must be exactly 10 digits.'})
         if not self.national_id.isdigit():
-            raise ValidationError({
-                'national_id': 'National ID must contain only digits.'
-            })
-
+            raise ValidationError({'national_id': 'National ID must contain only digits.'})
         if self.bail_paid and not self.bail_amount:
-            raise ValidationError({
-                'bail_amount': 'Bail amount is required when bail is marked as paid.'
-            })
-
+            raise ValidationError({'bail_amount': 'Bail amount is required when bail is marked as paid.'})
         if self.fine_paid and not self.fine_amount:
-            raise ValidationError({
-                'fine_amount': 'Fine amount is required when fine is marked as paid.'
-            })
+            raise ValidationError({'fine_amount': 'Fine amount is required when fine is marked as paid.'})
 
     @property
     def full_name(self):
@@ -221,11 +147,9 @@ class Suspect(BaseModel):
 
     @property
     def highest_crime_level(self):
-        """Get highest crime level across all linked cases"""
         case_links = self.case_links.select_related('case').all()
         if not case_links:
             return None
-
         level_map = {'LEVEL_3': 3, 'LEVEL_2': 2, 'LEVEL_1': 1, 'CRITICAL': 0}
         return min(
             (level_map.get(link.case.priority, 4) for link in case_links),
@@ -233,37 +157,21 @@ class Suspect(BaseModel):
         )
 
     def get_pursuit_priority(self):
-        """
-        Calculate pursuit priority based on:
-        max(Lj) * max(Di)
-        Where Lj = crime level (1-4) and Di = days under pursuit
-        """
         from django.utils import timezone
-
         case_links = self.case_links.select_related('case').all()
         if not case_links or not self.is_wanted:
             return 0
-
-        # Crime level mapping (higher number = more serious)
-        level_map = {
-            'CRITICAL': 4,
-            'LEVEL_1': 3,
-            'LEVEL_2': 2,
-            'LEVEL_3': 1
-        }
-
+        level_map = {'CRITICAL': 4, 'LEVEL_1': 3, 'LEVEL_2': 2, 'LEVEL_3': 1}
         max_level = max(
             level_map.get(link.case.priority, 0)
             for link in case_links
         )
-
         max_days = 0
         if self.pursuit_start_date:
             for link in case_links:
                 if link.case.status in ['OPEN', 'UNDER_INVESTIGATION']:
                     days = (timezone.now() - self.pursuit_start_date).days
                     max_days = max(max_days, days)
-
         return max_level * max_days
 
     def mark_as_wanted(self):
@@ -287,7 +195,6 @@ class Suspect(BaseModel):
         from django.utils import timezone
         if self.status != SuspectStatus.DETAINED:
             raise ValidationError('Only detained suspects can be released.')
-
         self.status = SuspectStatus.RELEASED
         self.detention_end_date = timezone.now()
         self.save()
@@ -296,10 +203,8 @@ class Suspect(BaseModel):
         from django.utils import timezone
         if not self.bail_amount:
             raise ValidationError('No bail amount set.')
-
         if amount < self.bail_amount:
             raise ValidationError(f'Payment amount must be at least {self.bail_amount}')
-
         self.bail_paid = True
         self.bail_payment_date = timezone.now()
         self.save()
@@ -308,36 +213,26 @@ class Suspect(BaseModel):
         from django.utils import timezone
         if not self.fine_amount:
             raise ValidationError('No fine amount set.')
-
         if amount < self.fine_amount:
             raise ValidationError(f'Payment amount must be at least {self.fine_amount}')
-
         self.fine_paid = True
         self.fine_payment_date = timezone.now()
         self.save()
 
 
 class SuspectCaseLink(BaseModel):
-    """
-    Link between Suspect and Case with case-specific information.
-    Tracks guilt probability ratings from interrogations.
-    """
-
     suspect = models.ForeignKey(
         Suspect,
         on_delete=models.CASCADE,
         related_name='case_links',
         verbose_name="Suspect"
     )
-
     case = models.ForeignKey(
         'cases.Case',
         on_delete=models.CASCADE,
         related_name='suspect_links',
         verbose_name="Case"
     )
-
-    # Guilt Assessment
     detective_guilt_score = models.IntegerField(
         null=True,
         blank=True,
@@ -345,7 +240,6 @@ class SuspectCaseLink(BaseModel):
         verbose_name="Detective Guilt Score",
         help_text="Detective's assessment of guilt probability (1-10)"
     )
-
     sergeant_guilt_score = models.IntegerField(
         null=True,
         blank=True,
@@ -353,38 +247,29 @@ class SuspectCaseLink(BaseModel):
         verbose_name="Sergeant Guilt Score",
         help_text="Sergeant's assessment of guilt probability (1-10)"
     )
-
     detective_assessment_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Detective Assessment Date"
     )
-
     sergeant_assessment_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Sergeant Assessment Date"
     )
-
-    # Status in this specific case
     role_in_crime = models.CharField(
         max_length=200,
         blank=True,
         verbose_name="Role in Crime",
         help_text="Suspected role in this specific crime"
     )
-
     identification_method = models.CharField(
         max_length=200,
         blank=True,
         verbose_name="Identification Method",
         help_text="How suspect was identified"
     )
-
-    notes = models.TextField(
-        blank=True,
-        verbose_name="Case-Specific Notes"
-    )
+    notes = models.TextField(blank=True, verbose_name="Case-Specific Notes")
 
     class Meta:
         verbose_name = "Suspect Case Link"
@@ -402,7 +287,6 @@ class SuspectCaseLink(BaseModel):
             scores.append(self.detective_guilt_score)
         if self.sergeant_guilt_score:
             scores.append(self.sergeant_guilt_score)
-
         return sum(scores) / len(scores) if scores else None
 
     @property
@@ -418,75 +302,41 @@ class InterrogationStatus(models.TextChoices):
 
 
 class Interrogation(BaseModel):
-    """
-    Interrogation session conducted by detective and sergeant.
-    Both must rate suspect's guilt probability from 1-10.
-    """
-
     suspect_case_link = models.ForeignKey(
         SuspectCaseLink,
         on_delete=models.CASCADE,
         related_name='interrogations',
         verbose_name="Suspect Case Link"
     )
-
-    # Interrogation Details
     interrogation_number = models.CharField(
         max_length=50,
         unique=True,
         editable=False,
         verbose_name="Interrogation Number"
     )
-
-    scheduled_date = models.DateTimeField(
-        verbose_name="Scheduled Date"
-    )
-
-    start_time = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="Start Time"
-    )
-
-    end_time = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="End Time"
-    )
-
-    location = models.CharField(
-        max_length=200,
-        verbose_name="Location"
-    )
-
+    scheduled_date = models.DateTimeField(verbose_name="Scheduled Date")
+    start_time = models.DateTimeField(null=True, blank=True, verbose_name="Start Time")
+    end_time = models.DateTimeField(null=True, blank=True, verbose_name="End Time")
+    location = models.CharField(max_length=200, verbose_name="Location")
     status = models.CharField(
         max_length=20,
         choices=InterrogationStatus.choices,
         default=InterrogationStatus.SCHEDULED,
         verbose_name="Status"
     )
-
-    # Participants
     detective = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name='interrogations_as_detective',
         verbose_name="Detective"
     )
-
     sergeant = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name='interrogations_as_sergeant',
         verbose_name="Sergeant"
     )
-
-    # Detective Assessment
-    detective_notes = models.TextField(
-        blank=True,
-        verbose_name="Detective Notes"
-    )
-
+    detective_notes = models.TextField(blank=True, verbose_name="Detective Notes")
     detective_guilt_rating = models.IntegerField(
         null=True,
         blank=True,
@@ -494,19 +344,12 @@ class Interrogation(BaseModel):
         verbose_name="Detective Guilt Rating",
         help_text="1 = least likely guilty, 10 = most likely guilty"
     )
-
     detective_completed_at = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Detective Completed At"
     )
-
-    # Sergeant Assessment
-    sergeant_notes = models.TextField(
-        blank=True,
-        verbose_name="Sergeant Notes"
-    )
-
+    sergeant_notes = models.TextField(blank=True, verbose_name="Sergeant Notes")
     sergeant_guilt_rating = models.IntegerField(
         null=True,
         blank=True,
@@ -514,38 +357,25 @@ class Interrogation(BaseModel):
         verbose_name="Sergeant Guilt Rating",
         help_text="1 = least likely guilty, 10 = most likely guilty"
     )
-
     sergeant_completed_at = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Sergeant Completed At"
     )
-
-    # Evidence & Recordings
     audio_recording = models.FileField(
         upload_to='interrogations/audio/',
         null=True,
         blank=True,
         verbose_name="Audio Recording"
     )
-
     video_recording = models.FileField(
         upload_to='interrogations/video/',
         null=True,
         blank=True,
         verbose_name="Video Recording"
     )
-
-    transcript = models.TextField(
-        blank=True,
-        verbose_name="Transcript"
-    )
-
-    # Additional Information
-    summary = models.TextField(
-        blank=True,
-        verbose_name="Summary"
-    )
+    transcript = models.TextField(blank=True, verbose_name="Transcript")
+    summary = models.TextField(blank=True, verbose_name="Summary")
 
     class Meta:
         verbose_name = "Interrogation"
@@ -570,26 +400,19 @@ class Interrogation(BaseModel):
     def generate_interrogation_number():
         from django.utils import timezone
         date_str = timezone.now().strftime('%Y%m%d')
-
         last_interrogation = Interrogation.objects.filter(
             interrogation_number__startswith=f'INT-{date_str}'
         ).order_by('-interrogation_number').first()
-
         if last_interrogation:
             last_num = int(last_interrogation.interrogation_number.split('-')[-1])
             new_num = last_num + 1
         else:
             new_num = 1
-
         return f'INT-{date_str}-{new_num:04d}'
 
     def clean(self):
-        if self.start_time and self.end_time:
-            if self.end_time <= self.start_time:
-                raise ValidationError({
-                    'end_time': 'End time must be after start time.'
-                })
-
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValidationError({'end_time': 'End time must be after start time.'})
         if self.status == InterrogationStatus.COMPLETED:
             if not self.detective_guilt_rating or not self.sergeant_guilt_rating:
                 raise ValidationError(
@@ -599,8 +422,7 @@ class Interrogation(BaseModel):
     @property
     def duration_minutes(self):
         if self.start_time and self.end_time:
-            delta = self.end_time - self.start_time
-            return int(delta.total_seconds() / 60)
+            return int((self.end_time - self.start_time).total_seconds() / 60)
         return None
 
     @property
@@ -617,59 +439,42 @@ class Interrogation(BaseModel):
         from django.utils import timezone
         if self.status != InterrogationStatus.SCHEDULED:
             raise ValidationError('Only scheduled interrogations can be started.')
-
         self.status = InterrogationStatus.IN_PROGRESS
         self.start_time = timezone.now()
         self.save()
 
     def submit_detective_assessment(self, guilt_rating, notes=''):
         from django.utils import timezone
-
         if not (1 <= guilt_rating <= 10):
             raise ValidationError('Guilt rating must be between 1 and 10.')
-
         self.detective_guilt_rating = guilt_rating
         self.detective_notes = notes
         self.detective_completed_at = timezone.now()
-
-        # Update SuspectCaseLink
         self.suspect_case_link.detective_guilt_score = guilt_rating
         self.suspect_case_link.detective_assessment_date = timezone.now()
         self.suspect_case_link.save()
-
-        # Check if interrogation is complete
         if self.sergeant_guilt_rating:
             self.complete_interrogation()
-
         self.save()
 
     def submit_sergeant_assessment(self, guilt_rating, notes=''):
         from django.utils import timezone
-
         if not (1 <= guilt_rating <= 10):
             raise ValidationError('Guilt rating must be between 1 and 10.')
-
         self.sergeant_guilt_rating = guilt_rating
         self.sergeant_notes = notes
         self.sergeant_completed_at = timezone.now()
-
-        # Update SuspectCaseLink
         self.suspect_case_link.sergeant_guilt_score = guilt_rating
         self.suspect_case_link.sergeant_assessment_date = timezone.now()
         self.suspect_case_link.save()
-
-        # Check if interrogation is complete
         if self.detective_guilt_rating:
             self.complete_interrogation()
-
         self.save()
 
     def complete_interrogation(self):
         from django.utils import timezone
-
         if not self.detective_guilt_rating or not self.sergeant_guilt_rating:
             raise ValidationError('Both assessments required to complete interrogation.')
-
         self.status = InterrogationStatus.COMPLETED
         if not self.end_time:
             self.end_time = timezone.now()

@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
-from .base import BaseModel
+
+from core.models import BaseModel
 
 
 class TrialStatus(models.TextChoices):
@@ -22,25 +23,19 @@ class Trial(BaseModel):
         related_name='trial',
         verbose_name="Case"
     )
-    
     judge = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name='presided_trials',
         verbose_name="Judge"
     )
-    
     status = models.CharField(
         max_length=20,
         choices=TrialStatus.choices,
         default=TrialStatus.SCHEDULED,
         verbose_name="Trial Status"
     )
-    
-    scheduled_date = models.DateTimeField(
-        verbose_name="Scheduled Date"
-    )
-    
+    scheduled_date = models.DateTimeField(verbose_name="Scheduled Date")
     verdict = models.CharField(
         max_length=10,
         choices=TrialVerdict.choices,
@@ -48,23 +43,14 @@ class Trial(BaseModel):
         blank=True,
         verbose_name="Verdict"
     )
-    
-    punishment = models.TextField(
-        blank=True,
-        verbose_name="Punishment"
-    )
-    
+    punishment = models.TextField(blank=True, verbose_name="Punishment")
     verdict_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Verdict Date"
     )
-    
-    judge_notes = models.TextField(
-        blank=True,
-        verbose_name="Judge Notes"
-    )
-    
+    judge_notes = models.TextField(blank=True, verbose_name="Judge Notes")
+
     class Meta:
         verbose_name = "Trial"
         verbose_name_plural = "Trials"

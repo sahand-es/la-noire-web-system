@@ -9,13 +9,6 @@ from .evidence import (
     EvidenceStatus,
     EvidenceType,
 )
-from .case_resolution import (
-    EvidenceLink,
-    DetectiveReport,
-    DetectiveReportStatus,
-    Notification,
-)
-
 __all__ = [
     'Case',
     'CasePriority',
@@ -29,8 +22,4 @@ __all__ = [
     'VehicleEvidence',
     'DocumentEvidence',
     'OtherEvidence',
-    'EvidenceLink',
-    'DetectiveReport',
-    'DetectiveReportStatus',
-    'Notification',
 ]

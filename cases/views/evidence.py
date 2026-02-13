@@ -13,9 +13,8 @@ from cases.models import (
     VehicleEvidence,
     DocumentEvidence,
     OtherEvidence,
-    EvidenceLink,
-    Notification,
 )
+from investigation.models import Notification
 from cases.serializers.evidence import (
     WitnessTestimonyCreateSerializer,
     WitnessTestimonySerializer,

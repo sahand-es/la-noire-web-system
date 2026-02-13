@@ -4,12 +4,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 
 from core.models import BaseModel
-from .case import Case
 
 
 class EvidenceLink(BaseModel):
     case = models.ForeignKey(
-        Case,
+        'cases.Case',
         on_delete=models.CASCADE,
         related_name='evidence_links',
         verbose_name="Case"
@@ -17,14 +16,14 @@ class EvidenceLink(BaseModel):
     from_content_type = models.ForeignKey(
         ContentType,
         on_delete=models.CASCADE,
-        related_name='evidence_links_from'
+        related_name='investigation_evidence_links_from'
     )
     from_object_id = models.PositiveIntegerField()
     from_evidence = GenericForeignKey('from_content_type', 'from_object_id')
     to_content_type = models.ForeignKey(
         ContentType,
         on_delete=models.CASCADE,
-        related_name='evidence_links_to'
+        related_name='investigation_evidence_links_to'
     )
     to_object_id = models.PositiveIntegerField()
     to_evidence = GenericForeignKey('to_content_type', 'to_object_id')
@@ -58,7 +57,7 @@ class DetectiveReportStatus(models.TextChoices):
 
 class DetectiveReport(BaseModel):
     case = models.ForeignKey(
-        Case,
+        'cases.Case',
         on_delete=models.CASCADE,
         related_name='detective_reports',
         verbose_name="Case"
@@ -112,7 +111,7 @@ class DetectiveReport(BaseModel):
 
 class Notification(BaseModel):
     case = models.ForeignKey(
-        Case,
+        'cases.Case',
         on_delete=models.CASCADE,
         related_name='notifications',
         verbose_name="Case"

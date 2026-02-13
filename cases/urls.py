@@ -9,16 +9,9 @@ from .views.evidence import (
     DocumentEvidenceViewSet,
     OtherEvidenceViewSet,
 )
-from .views.case_resolution import (
-    EvidenceLinkViewSet,
-    DetectiveReportViewSet,
-    NotificationViewSet,
-)
-
 router = DefaultRouter()
 router.register(r'cases', CaseViewSet, basename='case')
 router.register(r'complaints', ComplaintViewSet, basename='complaint')
-router.register(r'notifications', NotificationViewSet, basename='notification')
 
 app_name = 'cases'
 
@@ -34,10 +27,5 @@ urlpatterns = [
     path('cases/<int:case_pk>/document-evidence/<int:pk>/', DocumentEvidenceViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='case-document-evidence-detail'),
     path('cases/<int:case_pk>/other-evidence/', OtherEvidenceViewSet.as_view({'get': 'list', 'post': 'create'}), name='case-other-evidence'),
     path('cases/<int:case_pk>/other-evidence/<int:pk>/', OtherEvidenceViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='case-other-evidence-detail'),
-    path('cases/<int:case_pk>/evidence-links/', EvidenceLinkViewSet.as_view({'get': 'list', 'post': 'create'}), name='case-evidence-links'),
-    path('cases/<int:case_pk>/evidence-links/<int:pk>/', EvidenceLinkViewSet.as_view({'get': 'retrieve', 'delete': 'destroy'}), name='case-evidence-link-detail'),
-    path('cases/<int:case_pk>/detective-reports/', DetectiveReportViewSet.as_view({'get': 'list', 'post': 'create'}), name='case-detective-reports'),
-    path('cases/<int:case_pk>/detective-reports/<int:pk>/', DetectiveReportViewSet.as_view({'get': 'retrieve'}), name='case-detective-report-detail'),
-    path('cases/<int:case_pk>/detective-reports/<int:pk>/sergeant-reviews/', DetectiveReportViewSet.as_view({'post': 'sergeant_review'}), name='case-detective-report-sergeant-reviews'),
     path('', include(router.urls)),
 ]

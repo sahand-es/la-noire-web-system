@@ -1,29 +1,11 @@
 from django.contrib import admin
 
 from .models import (
-    Suspect,
-    Interrogation,
-    Trial,
     Reward,
     Document,
     Payment,
     Bail,
 )
-
-
-@admin.register(Suspect)
-class SuspectAdmin(admin.ModelAdmin):
-    pass
-
-
-@admin.register(Interrogation)
-class InterrogationAdmin(admin.ModelAdmin):
-    pass
-
-
-@admin.register(Trial)
-class TrialAdmin(admin.ModelAdmin):
-    pass
 
 
 @admin.register(Reward)

@@ -6,14 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 
-from cases.models import (
-    Case,
+from cases.models import Case
+from investigation.models import (
     EvidenceLink,
     DetectiveReport,
     DetectiveReportStatus,
     Notification,
 )
-from cases.serializers.case_resolution import (
+from investigation.serializers.case_resolution import (
     EvidenceLinkCreateSerializer,
     EvidenceLinkSerializer,
     DetectiveReportSerializer,
