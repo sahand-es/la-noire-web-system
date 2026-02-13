@@ -1,7 +1,6 @@
 from rest_framework import serializers
-from django.conf import settings
 
-from core.models import Reward, RewardStatus, RewardType
+from rewards.models import Reward, RewardStatus, RewardType
 from cases.models import Case
 
 
@@ -101,7 +100,6 @@ class RewardDetailSerializer(serializers.ModelSerializer):
 
 
 class RewardLookupSerializer(serializers.ModelSerializer):
-    """Minimal fields for police lookup by national_id + reward_code."""
     case_number = serializers.CharField(source='case.case_number', read_only=True, allow_null=True)
     recipient_national_id = serializers.CharField(source='recipient.national_id', read_only=True)
     recipient_name = serializers.CharField(source='recipient.get_full_name', read_only=True)
@@ -127,7 +125,6 @@ class RewardLookupSerializer(serializers.ModelSerializer):
 
 
 class OfficerReviewSerializer(serializers.Serializer):
-    """Officer: reject (invalid) or send to detective (valid)."""
     action = serializers.ChoiceField(choices=['reject', 'approve'])
     message = serializers.CharField(required=False, allow_blank=True)
 
@@ -138,7 +135,6 @@ class OfficerReviewSerializer(serializers.Serializer):
 
 
 class DetectiveReviewSerializer(serializers.Serializer):
-    """Detective: approve (user gets unique code) or reject."""
     action = serializers.ChoiceField(choices=['approve', 'reject'])
     message = serializers.CharField(required=False, allow_blank=True)
     amount = serializers.DecimalField(

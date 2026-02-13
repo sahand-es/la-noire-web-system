@@ -1,9 +1,10 @@
 from django.db import models
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.utils.crypto import get_random_string
-from .base import BaseModel
-from .user import UserProfile
+
+from core.models import BaseModel
 
 
 class RewardStatus(models.TextChoices):
@@ -32,7 +33,6 @@ class Reward(BaseModel):
     Civilians receive a unique code to claim their reward at police stations.
     """
 
-    # Unique reward code for civilians to claim payment
     reward_code = models.CharField(
         max_length=20,
         unique=True,
@@ -50,7 +50,7 @@ class Reward(BaseModel):
     )
 
     recipient = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='rewards_received',
         verbose_name="Recipient"
@@ -82,7 +82,6 @@ class Reward(BaseModel):
         verbose_name="Description"
     )
 
-    # Information submission details (for civilians)
     information_submitted = models.TextField(
         blank=True,
         verbose_name="Information Submitted",
@@ -95,9 +94,8 @@ class Reward(BaseModel):
         help_text="True if reward is for a civilian informant"
     )
 
-    # Officer initial review (valid -> send to detective; invalid -> reject)
     officer_reviewed_by = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -110,9 +108,8 @@ class Reward(BaseModel):
         verbose_name="Officer Reviewed At"
     )
 
-    # Detective approval (approve -> user gets unique code; reject)
     approved_by = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -126,7 +123,6 @@ class Reward(BaseModel):
         verbose_name="Approval Date"
     )
 
-    # Payment tracking
     payment_date = models.DateTimeField(
         null=True,
         blank=True,
@@ -158,7 +154,6 @@ class Reward(BaseModel):
         help_text="True if recipient verified identity with national ID"
     )
 
-    # Rejection
     rejection_reason = models.TextField(
         blank=True,
         verbose_name="Rejection Reason"
@@ -191,17 +186,13 @@ class Reward(BaseModel):
 
     @staticmethod
     def generate_reward_code():
-        """Generate unique reward code in format: RWD-YYYYMMDD-XXXXX"""
         from django.utils import timezone
         date_str = timezone.now().strftime('%Y%m%d')
         random_str = get_random_string(5, allowed_chars='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
         code = f"RWD-{date_str}-{random_str}"
-
-        # Ensure uniqueness
         while Reward.objects.filter(reward_code=code).exists():
             random_str = get_random_string(5, allowed_chars='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
             code = f"RWD-{date_str}-{random_str}"
-
         return code
 
     def clean(self):
@@ -209,18 +200,15 @@ class Reward(BaseModel):
             raise ValidationError({
                 'rejection_reason': 'Rejection reason is required when status is rejected.'
             })
-
         if self.status == RewardStatus.PAID and not self.payment_date:
             raise ValidationError({
                 'payment_date': 'Payment date is required when status is paid.'
             })
-
         if self.status in [RewardStatus.APPROVED, RewardStatus.READY_FOR_PAYMENT, RewardStatus.PAID]:
             if not self.approved_by:
                 raise ValidationError({
                     'approved_by': 'Approver is required for approved/paid rewards.'
                 })
-
         if self.is_civilian_reward and self.status == RewardStatus.PAID:
             if not self.verified_by_national_id:
                 raise ValidationError({
@@ -240,34 +228,23 @@ class Reward(BaseModel):
         return self.status == RewardStatus.READY_FOR_PAYMENT and self.is_civilian_reward
 
     def approve(self, approver):
-        """Approve reward for payment"""
         from django.utils import timezone
-
         if self.is_civilian_reward:
             self.status = RewardStatus.READY_FOR_PAYMENT
         else:
             self.status = RewardStatus.APPROVED
-
         self.approved_by = approver
         self.approved_date = timezone.now()
         self.save()
 
     def claim_by_civilian(self, station_name, verified=True):
-        """
-        Record civilian claiming reward at police station.
-        Requires national ID verification as per PDF requirements.
-        """
         from django.utils import timezone
-
         if not self.is_civilian_reward:
             raise ValidationError('Only civilian rewards can be claimed at stations.')
-
         if self.status != RewardStatus.READY_FOR_PAYMENT:
             raise ValidationError('Reward must be in READY_FOR_PAYMENT status.')
-
         if not verified:
             raise ValidationError('National ID verification is required.')
-
         self.claimed_at_station = station_name
         self.claimed_date = timezone.now()
         self.verified_by_national_id = verified
@@ -276,15 +253,11 @@ class Reward(BaseModel):
         self.save()
 
     def mark_as_paid(self, payment_reference='', station_name=''):
-        """Mark non-civilian reward as paid (direct payment to officers/detectives)"""
         from django.utils import timezone
-
         if self.is_civilian_reward:
             raise ValidationError('Use claim_by_civilian() method for civilian rewards.')
-
         if self.status not in [RewardStatus.APPROVED, RewardStatus.READY_FOR_PAYMENT]:
             raise ValidationError('Only approved rewards can be marked as paid.')
-
         self.status = RewardStatus.PAID
         self.payment_date = timezone.now()
         self.payment_reference = payment_reference
@@ -293,24 +266,19 @@ class Reward(BaseModel):
         self.save()
 
     def reject(self, reason):
-        """Reject reward with reason"""
         self.status = RewardStatus.REJECTED
         self.rejection_reason = reason
         self.save()
 
     def cancel(self):
-        """Cancel reward (only if not paid)"""
         if self.status == RewardStatus.PAID:
             raise ValidationError('Cannot cancel a paid reward.')
-
         self.status = RewardStatus.CANCELLED
         self.save()
 
     def get_claim_info(self):
-        """Get information for civilian to claim reward"""
         if not self.is_civilian_reward:
             return None
-
         return {
             'reward_code': self.reward_code,
             'amount': str(self.amount),
@@ -322,9 +290,7 @@ class Reward(BaseModel):
 
 
 class TeamReward(BaseModel):
-    """
-    Team reward for case resolution, distributed among team members.
-    """
+    """Team reward for case resolution, distributed among team members."""
 
     case = models.ForeignKey(
         'cases.Case',
@@ -353,7 +319,7 @@ class TeamReward(BaseModel):
     )
 
     approved_by = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -381,28 +347,16 @@ class TeamReward(BaseModel):
         return f"Team Reward for Case {self.case.case_number} - {self.total_amount}"
 
     def distribute_to_team(self):
-        """
-        Distribute team reward equally among all team members.
-        Creates individual Reward records for each member.
-        """
         if self.status != RewardStatus.APPROVED:
             raise ValidationError('Only approved team rewards can be distributed.')
-
         if self.distribution_completed:
             raise ValidationError('Team reward has already been distributed.')
-
-        # Collect all team members
         team_members = list(self.case.team_members.all())
         if self.case.assigned_detective:
             team_members.append(self.case.assigned_detective)
-
         if not team_members:
             raise ValidationError('No team members to distribute reward to.')
-
-        # Calculate per-member amount
         per_member_amount = self.total_amount / len(team_members)
-
-        # Create individual rewards
         for member in team_members:
             Reward.objects.create(
                 case=self.case,
@@ -415,7 +369,6 @@ class TeamReward(BaseModel):
                 approved_date=self.approved_date,
                 is_civilian_reward=False
             )
-
         self.distribution_completed = True
         self.status = RewardStatus.PAID
         self.save()

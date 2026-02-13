@@ -12,6 +12,7 @@ INSTALLED_APPS = [
     'cases',
     'investigation',
     'core',
+    'rewards',
     'accounts',
     'django.contrib.admin',
     'django.contrib.auth',

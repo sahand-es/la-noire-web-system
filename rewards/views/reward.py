@@ -1,17 +1,14 @@
 from django.utils import timezone
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
 
-from django.contrib.contenttypes.models import ContentType
-
-from core.models import Reward, RewardStatus
-from cases.models import Case
+from rewards.models import Reward, RewardStatus
 from investigation.models import Notification
-from core.serializers.reward import (
+from rewards.serializers.reward import (
     RewardCreateSerializer,
     RewardListSerializer,
     RewardDetailSerializer,
@@ -170,7 +167,6 @@ class RewardViewSet(viewsets.ModelViewSet):
         reward.save()
 
         try:
-            from investigation.models import Notification
             Notification.objects.get_or_create(
                 case=reward.case,
                 recipient=reward.recipient,
@@ -192,7 +188,6 @@ class RewardViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='lookups')
     def lookup(self, request):
-        """Police: look up reward by person's national_id + reward_code."""
         national_id = request.query_params.get('national_id')
         reward_code = request.query_params.get('reward_code')
         if not national_id or not reward_code:
