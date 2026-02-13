@@ -77,32 +77,6 @@ class Suspect(BaseModel):
         blank=True,
         verbose_name="Detention End Date"
     )
-    bail_amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Bail Amount"
-    )
-    bail_paid = models.BooleanField(default=False, verbose_name="Bail Paid")
-    bail_payment_date = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="Bail Payment Date"
-    )
-    fine_amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Fine Amount"
-    )
-    fine_paid = models.BooleanField(default=False, verbose_name="Fine Paid")
-    fine_payment_date = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="Fine Payment Date"
-    )
     criminal_history = models.TextField(blank=True, verbose_name="Criminal History")
     notes = models.TextField(blank=True, verbose_name="Notes")
 
@@ -125,10 +99,8 @@ class Suspect(BaseModel):
             raise ValidationError({'national_id': 'National ID must be exactly 10 digits.'})
         if not self.national_id.isdigit():
             raise ValidationError({'national_id': 'National ID must contain only digits.'})
-        if self.bail_paid and not self.bail_amount:
-            raise ValidationError({'bail_amount': 'Bail amount is required when bail is marked as paid.'})
-        if self.fine_paid and not self.fine_amount:
-            raise ValidationError({'fine_amount': 'Fine amount is required when fine is marked as paid.'})
+        if hasattr(self, 'bail_fine') and self.bail_fine:
+            self.bail_fine.clean()
 
     @property
     def full_name(self):
@@ -158,6 +130,25 @@ class Suspect(BaseModel):
             (level_map.get(link.case.priority, 4) for link in case_links),
             default=None
         )
+
+    @property
+    def is_level_2_or_3_crime(self):
+        """True if suspect's highest linked case priority is LEVEL2 or LEVEL3 (PROJECT 324-326)."""
+        level = self.highest_crime_level
+        return level is not None and level in (2, 3)
+
+    def _check_bail_fine_release(self):
+        """If eligible (level 2/3, payment made, and for level 3 sergeant approved), release from detention."""
+        if not getattr(self, 'bail_fine', None) or not self.is_level_2_or_3_crime or self.status != SuspectStatus.DETAINED:
+            return
+        bf = self.bail_fine
+        level = self.highest_crime_level
+        if level == 3 and not bf.sergeant_approval:
+            return
+        has_bail = bf.bail_amount and bf.bail_paid
+        has_fine = bf.fine_amount and bf.fine_paid
+        if has_bail or has_fine:
+            self.release_from_detention()
 
     def _pursuit_max_days_and_degree(self):
         """Return (max_days_Lj, max_degree_Di) for open cases under pursuit. (PROJECT 310-313)."""
@@ -221,24 +212,16 @@ class Suspect(BaseModel):
         self.save()
 
     def pay_bail(self, amount, payment_reference=''):
-        from django.utils import timezone
-        if not self.bail_amount:
-            raise ValidationError('No bail amount set.')
-        if amount < self.bail_amount:
-            raise ValidationError(f'Payment amount must be at least {self.bail_amount}')
-        self.bail_paid = True
-        self.bail_payment_date = timezone.now()
-        self.save()
+        """Record bail payment (via gateway); may release if eligible. See BailFine model."""
+        if not getattr(self, 'bail_fine', None) or not self.bail_fine:
+            raise ValidationError('No bail/fine set for this suspect.')
+        self.bail_fine.record_bail_payment(amount, payment_reference)
 
     def pay_fine(self, amount, payment_reference=''):
-        from django.utils import timezone
-        if not self.fine_amount:
-            raise ValidationError('No fine amount set.')
-        if amount < self.fine_amount:
-            raise ValidationError(f'Payment amount must be at least {self.fine_amount}')
-        self.fine_paid = True
-        self.fine_payment_date = timezone.now()
-        self.save()
+        """Record fine payment (via gateway); may release if eligible. See BailFine model."""
+        if not getattr(self, 'bail_fine', None) or not self.bail_fine:
+            raise ValidationError('No bail/fine set for this suspect.')
+        self.bail_fine.record_fine_payment(amount, payment_reference)
 
 
 class SuspectCaseLink(BaseModel):
