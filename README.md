@@ -18,8 +18,9 @@ pip install -r requirements.txt
 docker-compose up -d
 ```
 
-4. Run migrations:
+4. Run migrations (from `backend/`):
 ```bash
+cd backend
 python manage.py migrate
 ```
 
@@ -34,4 +35,6 @@ python manage.py runserver
 ```
 
 The server will be available at `http://127.0.0.1:8000/`
+
+**Project layout:** Backend (Django), including `manage.py`, lives in `backend/`. 
 
