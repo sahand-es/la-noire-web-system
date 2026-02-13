@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-from core.models import Complaint, ComplaintStatus, Case, CaseStatus
-from core.serializers.complaint import (
+from cases.models import Complaint, ComplaintStatus, Case, CaseStatus
+from cases.serializers.complaint import (
     ComplaintSerializer,
     ComplaintCreateSerializer,
     ComplaintUpdateSerializer,

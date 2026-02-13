@@ -1,16 +1,13 @@
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from .base import BaseModel
+from django.conf import settings
+
+from core.models import BaseModel
 from .case import Case
-from .user import UserProfile
 
 
 class EvidenceLink(BaseModel):
-    """
-    Links two evidence items on the detective board (red line).
-    Uses ContentType to reference any evidence type.
-    """
     case = models.ForeignKey(
         Case,
         on_delete=models.CASCADE,
@@ -32,7 +29,7 @@ class EvidenceLink(BaseModel):
     to_object_id = models.PositiveIntegerField()
     to_evidence = GenericForeignKey('to_content_type', 'to_object_id')
     created_by = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name='created_evidence_links',
@@ -60,9 +57,6 @@ class DetectiveReportStatus(models.TextChoices):
 
 
 class DetectiveReport(BaseModel):
-    """
-    Detective submits main suspects to sergeant; sergeant approves or disagrees.
-    """
     case = models.ForeignKey(
         Case,
         on_delete=models.CASCADE,
@@ -70,7 +64,7 @@ class DetectiveReport(BaseModel):
         verbose_name="Case"
     )
     detective = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name='submitted_detective_reports',
         verbose_name="Detective"
@@ -82,7 +76,7 @@ class DetectiveReport(BaseModel):
         verbose_name="Status"
     )
     sergeant = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -117,9 +111,6 @@ class DetectiveReport(BaseModel):
 
 
 class Notification(BaseModel):
-    """
-    Notifies detective when new evidence/documents are added to their case.
-    """
     case = models.ForeignKey(
         Case,
         on_delete=models.CASCADE,
@@ -127,7 +118,7 @@ class Notification(BaseModel):
         verbose_name="Case"
     )
     recipient = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='notifications',
         verbose_name="Recipient"

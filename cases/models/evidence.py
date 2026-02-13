@@ -1,8 +1,9 @@
 from django.db import models
 from django.core.validators import MinValueValidator, FileExtensionValidator
-from .base import BaseModel
+from django.conf import settings
+
+from core.models import BaseModel
 from .case import Case
-from .user import UserProfile
 
 
 class EvidenceStatus(models.TextChoices):
@@ -47,7 +48,7 @@ class BaseEvidence(BaseModel):
         verbose_name="Description"
     )
     collected_by = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name='%(class)s_collected',
@@ -181,7 +182,7 @@ class BiologicalEvidence(BaseEvidence):
         verbose_name="Coroner Approved"
     )
     coroner_approved_by = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -301,81 +302,60 @@ class VehicleEvidence(BaseEvidence):
             )
 
 
-
 class DocumentEvidence(BaseEvidence):
-    """
-    Document evidence model supporting key-value pairs for flexible document information storage.
-    Supports identification documents where information may be incomplete or missing.
-    """
-
     document_type = models.CharField(
         max_length=100,
         verbose_name="Document Type",
         help_text="e.g., National ID, Passport, Driver License, Contract, Letter, Receipt"
     )
-
     document_date = models.DateField(
         null=True,
         blank=True,
         verbose_name="Document Date"
     )
-
-    # Owner information (for identification documents)
     owner_full_name = models.CharField(
         max_length=255,
         blank=True,
         verbose_name="Document Owner Full Name",
         help_text="Complete name of the document owner (for ID documents)"
     )
-
-    # Flexible key-value storage for document attributes
     document_attributes = models.JSONField(
         default=dict,
         blank=True,
         verbose_name="Document Attributes",
         help_text="Key-value pairs for document information (e.g., {'ID_Number': '1234567890', 'Issue_Date': '2020-01-01'})"
     )
-
-    # Standard document fields
     issuer = models.CharField(
         max_length=200,
         blank=True,
         verbose_name="Issuer Organization"
     )
-
     content_summary = models.TextField(
         blank=True,
         verbose_name="Content Summary"
     )
-
-    # Document authenticity tracking
     is_original = models.BooleanField(
         default=True,
         verbose_name="Is Original Document"
     )
-
     is_authenticated = models.BooleanField(
         default=False,
         verbose_name="Is Authenticated",
         help_text="Has the document been verified for authenticity"
     )
-
     authentication_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Authentication Date"
     )
-
     authenticated_by = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='authenticated_documents',
         verbose_name="Authenticated By"
     )
-
-    # File attachments
     document_file = models.FileField(
         upload_to='evidence/documents/',
         blank=True,
@@ -383,24 +363,19 @@ class DocumentEvidence(BaseEvidence):
         validators=[FileExtensionValidator(['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'txt'])],
         verbose_name="Document File"
     )
-
-    # Additional images (for multiple pages/sides)
     additional_images = models.JSONField(
         default=list,
         blank=True,
         verbose_name="Additional Images",
         help_text="List of additional image file paths for multi-page documents"
     )
-
-    # Identification document specific fields
     is_identification_document = models.BooleanField(
         default=False,
         verbose_name="Is Identification Document",
         help_text="True if this is an ID card, passport, license, etc."
     )
-
     suspected_owner = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -426,37 +401,29 @@ class DocumentEvidence(BaseEvidence):
         return f"{self.evidence_number} - {self.document_type}"
 
     def add_attribute(self, key, value):
-        """Add a key-value pair to document attributes"""
         if not self.document_attributes:
             self.document_attributes = {}
         self.document_attributes[key] = value
         self.save()
 
     def remove_attribute(self, key):
-        """Remove a key-value pair from document attributes"""
         if self.document_attributes and key in self.document_attributes:
             del self.document_attributes[key]
             self.save()
 
     def get_attribute(self, key, default=None):
-        """Get a specific attribute value"""
-        if not self.document_attributes:
-            return default
-        return self.document_attributes.get(key, default)
+        return self.document_attributes.get(key, default) if self.document_attributes else default
 
     def update_attributes(self, attributes_dict):
-        """Update multiple attributes at once"""
         if not self.document_attributes:
             self.document_attributes = {}
         self.document_attributes.update(attributes_dict)
         self.save()
 
     def get_all_attributes(self):
-        """Get all document attributes as a dictionary"""
         return self.document_attributes or {}
 
     def mark_as_authenticated(self, authenticated_by_user):
-        """Mark document as authenticated"""
         from django.utils import timezone
         self.is_authenticated = True
         self.authentication_date = timezone.now()
@@ -465,35 +432,25 @@ class DocumentEvidence(BaseEvidence):
 
     @property
     def has_complete_information(self):
-        """Check if document has complete information based on type"""
         if self.is_identification_document:
-            required_fields = ['owner_full_name']
-            return all(getattr(self, field) for field in required_fields)
+            return all(getattr(self, f) for f in ['owner_full_name'])
         return bool(self.content_summary)
 
     @property
     def missing_information(self):
-        """Get list of missing information fields"""
         missing = []
-
-        if self.is_identification_document:
-            if not self.owner_full_name:
-                missing.append('Owner Full Name')
-
+        if self.is_identification_document and not self.owner_full_name:
+            missing.append('Owner Full Name')
         if not self.content_summary:
             missing.append('Content Summary')
-
         if not self.issuer:
             missing.append('Issuer')
-
         return missing
 
     def get_identification_summary(self):
-        """Get summary for identification documents"""
         if not self.is_identification_document:
             return None
-
-        summary = {
+        return {
             'document_type': self.document_type,
             'owner_name': self.owner_full_name or 'Unknown',
             'attributes': self.get_all_attributes(),
@@ -502,12 +459,8 @@ class DocumentEvidence(BaseEvidence):
             'is_authenticated': self.is_authenticated
         }
 
-        return summary
-
     def clean(self):
         from django.core.exceptions import ValidationError
-
-        # Ensure identification documents have owner name if available
         if self.is_identification_document and not self.owner_full_name and not self.document_attributes:
             raise ValidationError({
                 'owner_full_name': 'Identification documents should have owner name or document attributes.'

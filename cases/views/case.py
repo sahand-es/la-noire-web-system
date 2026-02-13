@@ -7,8 +7,9 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from core.models import Case, CaseStatus, UserProfile
-from core.serializers.case import (
+from cases.models import Case, CaseStatus
+from core.models import UserProfile
+from cases.serializers.case import (
     CaseListSerializer,
     CaseDetailSerializer,
     CaseCreateFromSceneSerializer,

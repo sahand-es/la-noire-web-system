@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+
 from core.models import BaseModel
 
 
@@ -18,7 +19,6 @@ class Complaint(BaseModel):
         on_delete=models.CASCADE,
         related_name='complaints'
     )
-
     case = models.ForeignKey(
         'Case',
         on_delete=models.SET_NULL,
@@ -26,24 +26,18 @@ class Complaint(BaseModel):
         blank=True,
         related_name='complaints'
     )
-
     status = models.CharField(
         max_length=30,
         choices=ComplaintStatus.choices,
         default=ComplaintStatus.PENDING_CADET
     )
-
     title = models.CharField(max_length=200)
     description = models.TextField()
-
     incident_date = models.DateTimeField()
     incident_location = models.CharField(max_length=255)
-
     rejection_count = models.PositiveSmallIntegerField(default=0)
-
     cadet_message = models.TextField(blank=True)
     officer_message = models.TextField(blank=True)
-
     reviewed_by_cadet = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -51,7 +45,6 @@ class Complaint(BaseModel):
         blank=True,
         related_name='cadet_reviewed_complaints'
     )
-
     reviewed_by_officer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

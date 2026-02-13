@@ -2,7 +2,6 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from .base import BaseModel
-from .case import Case
 from .user import UserProfile
 
 
@@ -67,7 +66,7 @@ class Suspect(BaseModel):
 
     # Case Relations
     cases = models.ManyToManyField(
-        Case,
+        'cases.Case',
         through='SuspectCaseLink',
         related_name='suspects',
         verbose_name="Related Cases"
@@ -332,7 +331,7 @@ class SuspectCaseLink(BaseModel):
     )
 
     case = models.ForeignKey(
-        Case,
+        'cases.Case',
         on_delete=models.CASCADE,
         related_name='suspect_links',
         verbose_name="Case"

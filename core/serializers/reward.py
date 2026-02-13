@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from django.conf import settings
 
-from core.models import Reward, RewardStatus, RewardType, Case
+from core.models import Reward, RewardStatus, RewardType
+from cases.models import Case
 
 
 class RewardCreateSerializer(serializers.ModelSerializer):

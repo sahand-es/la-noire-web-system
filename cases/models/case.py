@@ -1,7 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-from .base import BaseModel
-from .user import UserProfile
+from django.conf import settings
+
+from core.models import BaseModel
 
 
 class CaseStatus(models.TextChoices):
@@ -44,7 +45,6 @@ class Case(BaseModel):
         default=CasePriority.LEVEL3,
         verbose_name="Priority"
     )
-
     incident_date = models.DateTimeField(
         verbose_name="Incident Date"
     )
@@ -52,24 +52,20 @@ class Case(BaseModel):
         max_length=500,
         verbose_name="Incident Location"
     )
-
     assigned_detective = models.ForeignKey(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='assigned_cases',
-        # limit_choices_to={'roles__name': 'detective'},
         verbose_name="Assigned Detective"
     )
-
     team_members = models.ManyToManyField(
-        UserProfile,
+        settings.AUTH_USER_MODEL,
         blank=True,
         related_name='team_cases',
         verbose_name="Team Members"
     )
-
     reward_amount = models.DecimalField(
         max_digits=12,
         decimal_places=0,
@@ -77,30 +73,25 @@ class Case(BaseModel):
         validators=[MinValueValidator(0)],
         verbose_name="Reward Amount"
     )
-
     is_paid = models.BooleanField(
         default=False,
         verbose_name="Reward Paid"
     )
-
     payment_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Payment Date"
     )
-
     solved_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Solved Date"
     )
-
     closed_date = models.DateTimeField(
         null=True,
         blank=True,
         verbose_name="Closed Date"
     )
-
     notes = models.TextField(
         blank=True,
         verbose_name="Notes"

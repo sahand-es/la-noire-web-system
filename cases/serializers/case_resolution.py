@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from django.contrib.contenttypes.models import ContentType
 
-from core.models import EvidenceLink, DetectiveReport, DetectiveReportStatus, Notification
-from core.models import Case, UserProfile
+from cases.models import EvidenceLink, DetectiveReport, DetectiveReportStatus, Notification, Case
+from core.models import UserProfile
 
 
 class EvidenceLinkCreateSerializer(serializers.Serializer):

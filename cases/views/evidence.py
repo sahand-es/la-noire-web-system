@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 
-from core.models import (
+from cases.models import (
     Case,
     WitnessTestimony,
     BiologicalEvidence,
@@ -16,7 +16,7 @@ from core.models import (
     EvidenceLink,
     Notification,
 )
-from core.serializers.evidence import (
+from cases.serializers.evidence import (
     WitnessTestimonyCreateSerializer,
     WitnessTestimonySerializer,
     BiologicalEvidenceCreateSerializer,

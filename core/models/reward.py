@@ -3,7 +3,6 @@ from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.utils.crypto import get_random_string
 from .base import BaseModel
-from .case import Case
 from .user import UserProfile
 
 
@@ -42,7 +41,7 @@ class Reward(BaseModel):
     )
 
     case = models.ForeignKey(
-        Case,
+        'cases.Case',
         on_delete=models.CASCADE,
         related_name='rewards',
         null=True,
@@ -328,7 +327,7 @@ class TeamReward(BaseModel):
     """
 
     case = models.ForeignKey(
-        Case,
+        'cases.Case',
         on_delete=models.CASCADE,
         related_name='team_rewards',
         verbose_name="Related Case"

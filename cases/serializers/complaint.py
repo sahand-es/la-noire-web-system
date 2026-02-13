@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from core.models import Complaint
-from core.models.complaint import ComplaintStatus
+from cases.models import Complaint
+from cases.models.complaint import ComplaintStatus
 
 User = get_user_model()
 

@@ -2,7 +2,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from django.contrib.contenttypes.models import ContentType
 
-from core.models import (
+from cases.models import (
     WitnessTestimony,
     BiologicalEvidence,
     VehicleEvidence,
@@ -10,8 +10,8 @@ from core.models import (
     OtherEvidence,
     EvidenceStatus,
     EvidenceType,
-    UserProfile,
 )
+from core.models import UserProfile
 
 
 def base_evidence_fields():

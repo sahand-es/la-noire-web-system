@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 from .base import BaseModel
-from .case import Case
 
 
 class TrialStatus(models.TextChoices):
@@ -18,7 +17,7 @@ class TrialVerdict(models.TextChoices):
 
 class Trial(BaseModel):
     case = models.OneToOneField(
-        Case,
+        'cases.Case',
         on_delete=models.CASCADE,
         related_name='trial',
         verbose_name="Case"

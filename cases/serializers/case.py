@@ -1,7 +1,8 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from core.models import Case, UserProfile
+from cases.models import Case
+from core.models import UserProfile
 
 
 class CaseCreateFromSceneSerializer(serializers.ModelSerializer):
