@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views.case_resolution import EvidenceLinkViewSet, DetectiveReportViewSet, NotificationViewSet
 from .views.suspect import SuspectCaseLinkViewSet
+from .views.trial import TrialViewSet
 
 # All under /core/investigation/ (see core/urls.py). Case resources: cases/<case_pk>/...
 P = 'cases/<int:case_pk>'
@@ -27,5 +28,8 @@ urlpatterns = [
     path(f'{P}/suspect-links/<int:pk>/sergeant-assessment/', SuspectCaseLinkViewSet.as_view({'post': 'sergeant_assessment'}), name='case-suspect-link-sergeant-assessment'),
     path(f'{P}/suspect-links/<int:pk>/captain-opinion/', SuspectCaseLinkViewSet.as_view({'post': 'captain_opinion'}), name='case-suspect-link-captain-opinion'),
     path(f'{P}/suspect-links/<int:pk>/chief-approval/', SuspectCaseLinkViewSet.as_view({'post': 'chief_approval'}), name='case-suspect-link-chief-approval'),
+    # Trial: judge sees full case + evidence + individuals, then records verdict/punishment
+    path(f'{P}/trial/', TrialViewSet.as_view({'get': 'retrieve'}), name='case-trial'),
+    path(f'{P}/trial/record-verdict/', TrialViewSet.as_view({'post': 'record_verdict'}), name='case-trial-record-verdict'),
     path('', include(router.urls)),
 ]

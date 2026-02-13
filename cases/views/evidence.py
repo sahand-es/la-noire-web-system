@@ -28,7 +28,7 @@ from cases.serializers.evidence import (
     OtherEvidenceCreateSerializer,
     OtherEvidenceSerializer,
 )
-from core.permissions import IsCadetOrOfficer, IsDetective, IsDetectiveOrSergeantOrChief, IsCoroner
+from accounts.permissions import IsCadetOrOfficer, IsDetective, IsDetectiveOrSergeantOrChief, IsCoroner
 
 
 def notify_detective_new_evidence(case, content_object, message=''):

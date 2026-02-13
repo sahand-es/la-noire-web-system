@@ -18,7 +18,7 @@ from cases.serializers.case import (
     CaseAssignDetectiveSerializer,
     CaseStatisticsSerializer
 )
-from core.permissions import (
+from accounts.permissions import (
     IsPoliceRankExceptCadet,
     IsPoliceChief,
     IsDetective,
@@ -27,7 +27,7 @@ from core.permissions import (
     IsOfficer,
     IsCadetOrOfficer,
     IsDetectiveOrSergeantOrChief,
-    IsSergeantOrCaptainOrChief
+    IsSergeantOrCaptainOrChief,
 )
 
 

@@ -13,7 +13,7 @@ from cases.serializers.complaint import (
     CadetReviewSerializer,
     OfficerReviewSerializer
 )
-from core.permissions import IsComplainant, IsCadet, IsOfficer
+from accounts.permissions import IsComplainant, IsCadet, IsOfficer
 
 
 class ComplaintViewSet(viewsets.ModelViewSet):

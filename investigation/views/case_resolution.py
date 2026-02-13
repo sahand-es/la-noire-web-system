@@ -20,7 +20,7 @@ from investigation.serializers.case_resolution import (
     SergeantReviewSerializer,
     NotificationSerializer,
 )
-from core.permissions import IsDetective, IsSergeant, IsDetectiveOrSergeantOrChief
+from accounts.permissions import IsDetective, IsSergeant, IsDetectiveOrSergeantOrChief
 
 # Evidence model names that can be linked on the Detective Board (must have case_id)
 EVIDENCE_MODEL_NAMES = {

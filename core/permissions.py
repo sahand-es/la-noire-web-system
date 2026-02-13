@@ -1,4 +1,5 @@
-# Re-export from accounts so existing imports (from core.permissions import ...) keep working.
+# Permissions live in accounts.permissions. Re-export here for backward compatibility only.
+# Prefer: from accounts.permissions import ...
 from accounts.permissions import (
     HasRole,
     HasPermission,

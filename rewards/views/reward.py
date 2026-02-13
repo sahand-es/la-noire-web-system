@@ -16,7 +16,7 @@ from rewards.serializers.reward import (
     OfficerReviewSerializer,
     DetectiveReviewSerializer,
 )
-from core.permissions import IsOfficer, IsDetective, IsCadetOrOfficer
+from accounts.permissions import IsOfficer, IsDetective, IsCadetOrOfficer
 
 
 class RewardViewSet(viewsets.ModelViewSet):

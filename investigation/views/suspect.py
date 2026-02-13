@@ -13,7 +13,7 @@ from investigation.serializers.suspect import (
     CaptainOpinionSerializer,
     ChiefApprovalSerializer,
 )
-from core.permissions import (
+from accounts.permissions import (
     IsDetective,
     IsSergeant,
     IsCaptain,
