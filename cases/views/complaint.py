@@ -13,7 +13,7 @@ from cases.serializers.complaint import (
     CadetReviewSerializer,
     OfficerReviewSerializer
 )
-from core.permissions import IsComplainant, IsCadet, IsOfficer, IsCadetOrOfficer
+from core.permissions import IsComplainant, IsCadet, IsOfficer
 
 
 class ComplaintViewSet(viewsets.ModelViewSet):
@@ -41,7 +41,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         if self.action == 'officer_review':
             return [IsOfficer()]
         if self.action == 'list':
-            return [IsCadetOrOfficer()]
+            return [IsAuthenticated()]
         return [IsAuthenticated()]
 
     def get_queryset(self):

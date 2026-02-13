@@ -107,3 +107,9 @@ class ComplaintUpdateSerializer(serializers.ModelSerializer):
                 'Can only update complaints that have been returned for correction'
             )
         return data
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        instance.status = ComplaintStatus.PENDING_CADET
+        instance.save(update_fields=['status'])
+        return instance

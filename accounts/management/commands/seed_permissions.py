@@ -102,7 +102,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if not hasattr(Role, 'permissions'):
             self.stdout.write(
-                self.style.WARNING('Role model has no "permissions" M2M (e.g. still using core.Role). Skip seed.')
+                self.style.WARNING('Role model has no "permissions" M2M. Skip seed.')
             )
             return
 

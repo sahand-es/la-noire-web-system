@@ -46,7 +46,12 @@ class UserProfile(AbstractUser):
         verbose_name='user permissions',
         help_text='Specific permissions for this user.',
     )
-    roles = models.ManyToManyField(Role, related_name='users', blank=True)
+    roles = models.ManyToManyField(
+        Role,
+        related_name='accounts_users',
+        related_query_name='accounts_user',
+        blank=True,
+    )
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

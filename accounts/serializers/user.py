@@ -2,7 +2,8 @@ from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from core.models import Role, UserProfile
+from core.models import UserProfile
+from accounts.models import Role
 
 User = get_user_model()
 

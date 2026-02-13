@@ -6,7 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import login, logout
 from drf_spectacular.utils import extend_schema, OpenApiExample
 
-from core.models import UserProfile, Role
+from core.models import UserProfile
+from accounts.models import Role
 from accounts.serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,

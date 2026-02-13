@@ -1,9 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from core.models import Role, UserProfile
-
-from accounts.models import ActionPermission
+from core.models import UserProfile
+from accounts.models import ActionPermission, Role
 
 
 @admin.register(ActionPermission)

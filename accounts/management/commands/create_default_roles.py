@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.models import Role
+from accounts.models import Role
 
 
 class Command(BaseCommand):
