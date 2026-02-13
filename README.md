@@ -36,5 +36,23 @@ python manage.py runserver
 
 The server will be available at `http://127.0.0.1:8000/`
 
-**Project layout:** Backend (Django), including `manage.py`, lives in `backend/`. 
+---
 
+## Frontend
+
+1. Install dependencies (once):
+```bash
+cd frontend
+npm install
+```
+
+2. Run dev server:
+```bash
+npm run dev
+```
+
+App at `http://localhost:5173/`. Build: `npm run build` → `frontend/dist/`. Stack: Vite, React, Tailwind CSS, Ant Design.
+
+---
+
+**Project layout:** `backend/` (Django), `frontend/` (Vite + React). Root: README, PROJECT-en.md, requirements.txt, docker-compose.

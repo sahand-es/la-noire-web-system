@@ -1,6 +1,6 @@
-# AI Rules for Django Project
+# AI Rules for La Noire Web System
 
-This project follows **PROJECT-en.md** (L.A. Noire web system, two checkpoints: back-end first with DRF, then front-end). The rules below apply to back-end and stay aligned with that document.
+This project follows **PROJECT-en.md** (L.A. Noire web system, two checkpoints: back-end first with DRF, then front-end). Backend and frontend rules below.
 
 ## Design Principles
 - Keep it simple and minimal. Do not over-engineer solutions.
@@ -9,10 +9,22 @@ This project follows **PROJECT-en.md** (L.A. Noire web system, two checkpoints: 
 - Avoid premature optimization.
 
 ## Project Structure
-- Use `config/` for project-level settings (settings.py, urls.py, wsgi.py, asgi.py)
-- Use `core/` app for shared models, utilities, and base classes
+- **Backend** lives in `backend/`: run `python manage.py` from inside `backend/` (e.g. `cd backend && python manage.py runserver`).
+- **Frontend** lives in `frontend/`: Vite + React. Run `npm run dev` from inside `frontend/`.
+- Use `backend/config/` for project-level settings (settings.py, urls.py, wsgi.py, asgi.py)
+- Use `backend/core/` app for shared models, utilities, and base classes
 - Create new apps only when there's a clear domain separation
 - Keep apps focused and cohesive
+
+**Folder-based layout (per app)**  
+Use a **folder** for models, serializers, views, etc., instead of single `models.py` / `serializers.py` files. Each folder contains one module per domain and an `__init__.py` that re-exports public symbols.
+
+- `models/` — e.g. `user.py`, `case.py`, `__init__.py` (re-exports `UserProfile`, `Role`, `Case`, …)
+- `serializers/` — e.g. `user.py`, `case.py`, `__init__.py`
+- `views/` — e.g. `user.py`, `case.py`, `__init__.py`
+- Same idea for `permissions/`, `filters/`, or other grouped code when the app has many of them
+
+Imports: `from core.models import Case` (package `__init__.py` exposes the classes); inside the app, `from core.models.case import Case` is also fine. Prefer the short form in other apps.
 
 ## Model Definition
 - All models should inherit from `core.models.BaseModel` for timestamps
@@ -309,6 +321,43 @@ Examples:
 - `feat[models]: add initial models placeholders`
 - `doc[AI]: add ai rules`
 
+
+## Frontend (React + Vite)
+
+**Stack and styling**
+- Vite for build, React, Tailwind CSS, Ant Design (antd). Do not add custom CSS files or one-off stylesheets.
+- Use only Tailwind utility classes and Ant Design components. No custom CSS (no `*.css` per component, no inline `style={{}}` for layout/spacing). Tailwind for layout (flex, grid, spacing, typography); antd for UI (Button, Form, Table, Input, etc.).
+- Prefer antd components over building from scratch. Keep the frontend simple and minimal; no extra state libraries until needed, no custom design system.
+
+**Frontend project structure**
+- `frontend/src/` — entry: `main.jsx`, `App.jsx`, `index.css` (only `@import "tailwindcss";`). Add `pages/`, `components/`, `api/` (or `lib/`) when needed; keep flat until the app grows.
+- One component per file. Page components in `pages/` (e.g. `LoginPage.jsx`, `DashboardPage.jsx`). Reusable UI in `components/` (e.g. `CaseCard.jsx`).
+- API base URL via `import.meta.env.VITE_API_URL`; keep secrets in `.env` (and in .gitignore).
+
+**Frontend naming**
+- **Files and folders:** `PascalCase` for components/pages (e.g. `LoginPage.jsx`, `CaseCard.jsx`), `camelCase` or `kebab-case` for non-component modules (e.g. `api.js`, `authHelpers.js`).
+- **Components:** PascalCase (e.g. `function LoginPage()`, `function CaseCard()`).
+- **Props, state, variables, functions:** camelCase (e.g. `userName`, `onSubmit`, `isLoading`).
+- **Constants:** UPPER_SNAKE when exported (e.g. `API_BASE`).
+
+**Components and patterns**
+- Use function components and hooks. No class components.
+- Keep components small; split when a single component does too much (e.g. form + list + filters → separate components).
+- Fetch in `useEffect` or on event (e.g. button click); store in `useState`. Use only the app’s request module for backend calls (see **Requests (API client)**); no raw fetch or axios elsewhere.
+- Handle loading and error states (antd Spin, message.error) instead of silent failures.
+- Forms: prefer antd Form with `onFinish`; validate with Form rules, not custom CSS or ad-hoc divs.
+
+**Requests (API client)**
+- Implement all HTTP requests in a single module (e.g. `src/api/request.js` or `src/lib/request.js`). The rest of the app must use only this module; no raw `fetch` or `axios` in components or pages.
+- The request module should: use `import.meta.env.VITE_API_URL` as base URL; attach `Authorization: Bearer <token>` when a token is available; send JSON with `Content-Type: application/json` where needed; parse JSON and normalize backend shape `{ status, data?, message? }`. Expose methods such as `get(path)`, `post(path, body)`, `put(path, body)`, `patch(path, body)`, `delete(path)` that return a Promise (e.g. resolve with `data` on success, reject or throw with `message` on error so callers can show it).
+- Domain-specific helpers (e.g. `api/cases.js`, `api/auth.js`) may live in the same folder and call the request module; they must not implement their own HTTP. Components and pages import from the request module or from these helpers only.
+
+**API and backend**
+- Expect backend JSON: `{ status: 'success', data: ... }` or `{ status: 'error', message: '...' }`. Check `status` and show `message` on error.
+- Auth: store token (e.g. JWT) in memory or localStorage; send `Authorization: Bearer <token>`; clear on logout. Do not over-engineer auth (e.g. no refresh logic until required).
+
+**Routing**
+- Add a router (e.g. react-router-dom) only when you have multiple pages. Use simple routes; avoid nested route config until needed.
 
 ## General Guidelines
 - Write code as if a human developer would write it - natural and straightforward
