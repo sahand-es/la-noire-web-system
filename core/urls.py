@@ -1,14 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views.user import (
-    UserRegistrationView,
-    UserLoginView,
-    UserLogoutView,
-    UserProfileView,
-    ChangePasswordView,
-    RoleViewSet,
-    UserViewSet
-)
 from .views.case import CaseViewSet
 from .views.complaint import ComplaintViewSet
 from .views.evidence import (
@@ -26,8 +17,6 @@ from .views.case_resolution import (
 from .views.reward import RewardViewSet
 
 router = DefaultRouter()
-router.register(r'roles', RoleViewSet, basename='role')
-router.register(r'users', UserViewSet, basename='user')
 router.register(r'cases', CaseViewSet, basename='case')
 router.register(r'complaints', ComplaintViewSet, basename='complaint')
 router.register(r'notifications', NotificationViewSet, basename='notification')
@@ -36,11 +25,6 @@ router.register(r'rewards', RewardViewSet, basename='reward')
 app_name = 'core'
 
 urlpatterns = [
-    path('auth/registrations/', UserRegistrationView.as_view(), name='register'),
-    path('auth/sessions/', UserLoginView.as_view(), name='login'),
-    path('auth/sessions/current/', UserLogoutView.as_view(), name='logout'),
-    path('auth/profile/', UserProfileView.as_view(), name='profile'),
-    path('auth/password/', ChangePasswordView.as_view(), name='change-password'),
     path('cases/<int:case_pk>/witness-testimonies/', WitnessTestimonyViewSet.as_view({'get': 'list', 'post': 'create'}), name='case-witness-testimonies'),
     path('cases/<int:case_pk>/witness-testimonies/<int:pk>/', WitnessTestimonyViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='case-witness-testimony-detail'),
     path('cases/<int:case_pk>/biological-evidence/', BiologicalEvidenceViewSet.as_view({'get': 'list', 'post': 'create'}), name='case-biological-evidence'),

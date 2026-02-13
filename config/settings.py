@@ -10,6 +10,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'core',
+    'accounts',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -118,6 +119,6 @@ SPECTACULAR_SETTINGS = {
 AUTH_USER_MODEL = 'core.UserProfile'
 
 AUTHENTICATION_BACKENDS = [
-    'core.backends.MultiFieldAuthBackend',
+    'accounts.backends.MultiFieldAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]

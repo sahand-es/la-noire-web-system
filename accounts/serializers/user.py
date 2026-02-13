@@ -47,13 +47,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_phone_number(self, value):
-        # Iranian phone number validation (example)
         if not value.startswith('09') or len(value) != 11:
             raise serializers.ValidationError("Phone number must start with 09 and be 11 digits.")
         return value
 
     def validate_national_id(self, value):
-        # Iranian national ID validation (10 digits)
         if not value.isdigit() or len(value) != 10:
             raise serializers.ValidationError("National ID must be exactly 10 digits.")
         return value
@@ -244,4 +242,3 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
         model = Role
         fields = ['id', 'name', 'description', 'is_active']
         read_only_fields = ['id']
-

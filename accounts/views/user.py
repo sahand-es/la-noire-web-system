@@ -1,13 +1,13 @@
-from django.http import HttpResponse
 from rest_framework import status, generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.decorators import action
-from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import login, logout
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
-from ..serializers.user import (
+from drf_spectacular.utils import extend_schema, OpenApiExample
+
+from core.models import UserProfile, Role
+from accounts.serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,
     UserProfileSerializer,
@@ -16,11 +16,9 @@ from ..serializers.user import (
     UserDetailSerializer,
     UserUpdateSerializer,
     RoleSerializer,
-    RoleCreateUpdateSerializer
+    RoleCreateUpdateSerializer,
 )
-from ..models import UserProfile, Role
-from ..permissions import IsSystemAdmin
-
+from accounts.permissions import IsSystemAdmin
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -28,6 +26,7 @@ class UserRegistrationView(generics.CreateAPIView):
     User Registration Endpoint
 
     Register a new user with username, email, phone number, national ID, and password.
+    New users receive the Base user role; the system administrator assigns other roles.
     """
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
@@ -56,7 +55,6 @@ class UserRegistrationView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Generate tokens
         refresh = RefreshToken.for_user(user)
 
         return Response({
@@ -85,57 +83,40 @@ class UserLoginView(APIView):
         examples=[
             OpenApiExample(
                 'Login with Username',
-                value={
-                    'identifier': 'john_doe',
-                    'password': 'SecurePass123!'
-                }
+                value={'identifier': 'john_doe', 'password': 'SecurePass123!'}
             ),
             OpenApiExample(
                 'Login with Email',
-                value={
-                    'identifier': 'john@example.com',
-                    'password': 'SecurePass123!'
-                }
+                value={'identifier': 'john@example.com', 'password': 'SecurePass123!'}
             ),
             OpenApiExample(
                 'Login with Phone',
-                value={
-                    'identifier': '09123456789',
-                    'password': 'SecurePass123!'
-                }
+                value={'identifier': '09123456789', 'password': 'SecurePass123!'}
             ),
             OpenApiExample(
                 'Login with National ID',
-                value={
-                    'identifier': '1234567890',
-                    'password': 'SecurePass123!'
-                }
+                value={'identifier': '1234567890', 'password': 'SecurePass123!'}
             )
         ]
     )
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data, context={'request': request})
         if not serializer.is_valid():
-            # Check if this is an authentication error
             for field, errors in serializer.errors.items():
                 if isinstance(errors, list) and errors:
                     error_detail = errors[0]
-                    # Check if error has authorization code
                     if hasattr(error_detail, 'code') and error_detail.code == 'authorization':
-                        return Response({
-                            'error': str(error_detail),
-                        }, status=status.HTTP_401_UNAUTHORIZED)
-            # Generic validation error
-            return Response({
-                'error': 'Invalid credentials'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                        return Response(
+                            {'error': str(error_detail)},
+                            status=status.HTTP_401_UNAUTHORIZED
+                        )
+            return Response(
+                {'error': 'Invalid credentials'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         user = serializer.validated_data['user']
-
-        # Generate tokens
         refresh = RefreshToken.for_user(user)
-
-        # Django session login (optional, useful for browsable API)
         login(request, user)
 
         return Response({
@@ -160,9 +141,7 @@ class UserLogoutView(APIView):
         request={
             'application/json': {
                 'type': 'object',
-                'properties': {
-                    'refresh': {'type': 'string'}
-                }
+                'properties': {'refresh': {'type': 'string'}}
             }
         },
         responses={205: None}
@@ -173,16 +152,16 @@ class UserLogoutView(APIView):
             if refresh_token:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
-
             logout(request)
-
-            return Response({
-                'message': 'Logout successful'
-            }, status=status.HTTP_205_RESET_CONTENT)
+            return Response(
+                {'message': 'Logout successful'},
+                status=status.HTTP_205_RESET_CONTENT
+            )
         except Exception as e:
-            return Response({
-                'error': str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
@@ -198,16 +177,11 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
-    @extend_schema(
-        responses={200: UserProfileSerializer}
-    )
+    @extend_schema(responses={200: UserProfileSerializer})
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @extend_schema(
-        request=UserProfileSerializer,
-        responses={200: UserProfileSerializer}
-    )
+    @extend_schema(request=UserProfileSerializer, responses={200: UserProfileSerializer})
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
@@ -237,20 +211,20 @@ class ChangePasswordView(APIView):
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-
         user = request.user
         user.set_password(serializer.validated_data['new_password'])
         user.save()
+        return Response(
+            {'message': 'Password changed successfully'},
+            status=status.HTTP_200_OK
+        )
 
-        return Response({
-            'message': 'Password changed successfully'
-        }, status=status.HTTP_200_OK)
 
 class RoleViewSet(viewsets.ModelViewSet):
     """
     Role Management ViewSet
 
-    crud operations on roles (requires System Administrator role)
+    CRUD operations on roles (requires System Administrator role).
     """
     queryset = Role.objects.all().order_by('name')
     permission_classes = [permissions.IsAuthenticated, IsSystemAdmin]
@@ -260,48 +234,27 @@ class RoleViewSet(viewsets.ModelViewSet):
             return RoleCreateUpdateSerializer
         return RoleSerializer
 
-    @extend_schema(
-        responses={200: RoleSerializer(many=True)},
-        description='List all active and inactive roles'
-    )
+    @extend_schema(responses={200: RoleSerializer(many=True)}, description='List all active and inactive roles')
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @extend_schema(
-        request=RoleCreateUpdateSerializer,
-        responses={201: RoleSerializer},
-        description='Create a new role'
-    )
+    @extend_schema(request=RoleCreateUpdateSerializer, responses={201: RoleSerializer}, description='Create a new role')
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
 
-    @extend_schema(
-        responses={200: RoleSerializer},
-        description='Retrieve a specific role'
-    )
+    @extend_schema(responses={200: RoleSerializer}, description='Retrieve a specific role')
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
-    @extend_schema(
-        request=RoleCreateUpdateSerializer,
-        responses={200: RoleSerializer},
-        description='Update an entire role'
-    )
+    @extend_schema(request=RoleCreateUpdateSerializer, responses={200: RoleSerializer}, description='Update an entire role')
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
 
-    @extend_schema(
-        request=RoleCreateUpdateSerializer,
-        responses={200: RoleSerializer},
-        description='Partially update a role'
-    )
+    @extend_schema(request=RoleCreateUpdateSerializer, responses={200: RoleSerializer}, description='Partially update a role')
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
 
-    @extend_schema(
-        responses={204: None},
-        description='Delete a role'
-    )
+    @extend_schema(responses={204: None}, description='Delete a role')
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
 
@@ -310,7 +263,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     User Management ViewSet
 
-    CRUD operations on users (requires System Administrator role)
+    CRUD operations on users (requires System Administrator role).
     """
     queryset = UserProfile.objects.all().select_related().prefetch_related('roles').order_by('-created_at')
     permission_classes = [permissions.IsAuthenticated, IsSystemAdmin]
@@ -318,56 +271,35 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return UserRegistrationSerializer
-        elif self.action in ['update', 'partial_update']:
+        if self.action in ['update', 'partial_update']:
             return UserUpdateSerializer
-        elif self.action == 'retrieve':
+        if self.action == 'retrieve':
             return UserDetailSerializer
-        elif self.action == 'list':
+        if self.action == 'list':
             return UserListSerializer
         return UserProfileSerializer
 
-    @extend_schema(
-        responses={200: UserListSerializer(many=True)},
-        description='List all users'
-    )
+    @extend_schema(responses={200: UserListSerializer(many=True)}, description='List all users')
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @extend_schema(
-        request=UserRegistrationSerializer,
-        responses={201: UserProfileSerializer},
-        description='Create a new user'
-    )
+    @extend_schema(request=UserRegistrationSerializer, responses={201: UserProfileSerializer}, description='Create a new user')
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
 
-    @extend_schema(
-        responses={200: UserDetailSerializer},
-        description='Retrieve a specific user'
-    )
+    @extend_schema(responses={200: UserDetailSerializer}, description='Retrieve a specific user')
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
-    @extend_schema(
-        request=UserUpdateSerializer,
-        responses={200: UserDetailSerializer},
-        description='Update an entire user'
-    )
+    @extend_schema(request=UserUpdateSerializer, responses={200: UserDetailSerializer}, description='Update an entire user')
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
 
-    @extend_schema(
-        request=UserUpdateSerializer,
-        responses={200: UserDetailSerializer},
-        description='Partially update a user'
-    )
+    @extend_schema(request=UserUpdateSerializer, responses={200: UserDetailSerializer}, description='Partially update a user')
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
 
-    @extend_schema(
-        responses={204: None},
-        description='Delete a user'
-    )
+    @extend_schema(responses={204: None}, description='Delete a user')
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
 
@@ -396,15 +328,17 @@ class UserViewSet(viewsets.ModelViewSet):
         roles_ids = request.data.get('role_ids', [])
 
         if not roles_ids:
-            return Response({
-                'error': 'role_ids list is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'role_ids list is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         roles = Role.objects.filter(id__in=roles_ids, is_active=True)
         if not roles.exists():
-            return Response({
-                'error': 'No valid active roles found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'No valid active roles found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         user.roles.set(roles)
         return Response({
