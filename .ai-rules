@@ -1,5 +1,7 @@
 # AI Rules for Django Project
 
+This project follows **PROJECT-en.md** (L.A. Noire web system, two checkpoints: back-end first with DRF, then front-end). The rules below apply to back-end and stay aligned with that document.
+
 ## Design Principles
 - Keep it simple and minimal. Do not over-engineer solutions.
 - Prefer Django's built-in features over external packages when possible.
@@ -37,6 +39,15 @@ class MyModel(BaseModel):
 - Use descriptive variable and function names instead of comments
 - Follow PEP 8 style guide
 
+## Naming Conventions
+- **Files and modules:** `snake_case` (e.g. `user.py`, `case_resolution.py`).
+- **Classes:** `PascalCase`. Models and choices: `Case`, `CaseStatus`, `Complaint`. ViewSets: `{Resource}ViewSet` (e.g. `CaseViewSet`, `RewardViewSet`). API views: `{Resource}{Action}View` or `{Action}View` (e.g. `UserRegistrationView`, `UserProfileView`). Serializers: `{Resource}{UseCase}Serializer` (e.g. `CaseListSerializer`, `ComplaintCreateSerializer`, `OfficerReviewSerializer`). Permission classes: `Is{Role}` or `Is{Role}Or{Role}` (e.g. `IsOfficer`, `IsCadetOrOfficer`). Admin: `{Model}Admin`. Mixins: `{Purpose}Mixin` (e.g. `CaseEvidenceMixin`).
+- **Variables and functions:** `snake_case` (e.g. `validated_data`, `get_queryset`). Method names on ViewSets: `snake_case` (e.g. `officer_review`, `cadet_review`).
+- **Constants and enum values:** `UPPER_SNAKE` for module/settings constants (e.g. `SECRET_KEY`, `DEBUG`). Model choices: use `UPPER_SNAKE` for the value, PascalCase for the class (e.g. `class CaseStatus(TextChoices): PENDING = 'pending'`).
+- **URL paths and route names:** Path segments and `url_path` in `@action`: `kebab-case` (e.g. `biological-evidence`, `officer-reviews`, `assigned-detective`). URL name in `path()`: `kebab-case` (e.g. `case-witness-testimonies`, `case-biological-evidence-detail`).
+- **Model fields and JSON keys:** `snake_case` (e.g. `created_at`, `reward_code`, `assigned_detective`). Same for API request/response keys unless a client convention requires otherwise.
+- **related_name:** `snake_case`, plural when it returns multiple (e.g. `related_name='complaints'`), singular for ForeignKey back-ref when one (e.g. `related_name='case'`).
+
 ## Django Best Practices
 - Use class-based views when appropriate, function-based views for simple cases
 - Keep views thin - move business logic to services or model methods
@@ -72,6 +83,118 @@ class MyModel(BaseModel):
 - Use ViewSets when appropriate for standard CRUD operations
 - Custom actions should use `@action` decorator in ViewSets
 - Group related endpoints logically
+
+## Structure of Views and Serializers
+
+**ViewSet structure**
+- One ViewSet per resource. Set `queryset` with `select_related()` / `prefetch_related()` and default ordering.
+- Use `get_serializer_class()` to return the right serializer per action: create → `*CreateSerializer`, list → `*ListSerializer`, retrieve → `*DetailSerializer`, custom actions → action-specific serializer (or `None` if no body).
+- Use `get_permissions()` to return action-specific permission classes (e.g. create → `IsAuthenticated`, custom action → `IsOfficer()`).
+- Override `get_queryset()` when list/retrieve must be filtered by user or role.
+- Override `create`, `retrieve`, or `list` only when you need a custom response shape or logic; otherwise rely on the default behavior.
+- Custom process endpoints: `@action(detail=True, methods=['post'], url_path='kebab-case')`. Use `get_object_or_404` when the action targets a specific instance. Return `Response({'status': 'success', 'data': serializer.data})` or `Response({'status': 'error', 'message': '...'}, status=...)`.
+- Imports: models from `core.models`, serializers from `core.serializers.<module>`, permissions from `core.permissions`.
+
+**Serializer structure**
+- Use separate serializers per use case: `*CreateSerializer`, `*ListSerializer`, `*DetailSerializer`, `*UpdateSerializer` for CRUD; plus plain `Serializer` classes for custom action request bodies (e.g. `OfficerReviewSerializer` with `action = ChoiceField(...)`, `message = CharField(...)`).
+- ModelSerializer: set `Meta.model` and `Meta.fields`. Add read-only display fields with `SerializerMethodField()` or `CharField(source='relation.get_full_name', read_only=True)`.
+- For action input only (no model): use `serializers.Serializer` with explicit fields and `validate()` / `validate_<field>()` when needed. Add a short docstring only when the serializer’s role is not obvious.
+- Keep create/update logic in the serializer when it’s about defaults and validation; keep workflow and side effects (status changes, notifications) in the view.
+
+Example ViewSet (excerpt):
+
+```python
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+
+from core.models import Complaint, ComplaintStatus
+from core.serializers.complaint import (
+    ComplaintSerializer,
+    ComplaintCreateSerializer,
+    ComplaintUpdateSerializer,
+    OfficerReviewSerializer,
+)
+from rest_framework.permissions import IsAuthenticated
+from core.permissions import IsOfficer
+
+class ComplaintViewSet(viewsets.ModelViewSet):
+    queryset = Complaint.objects.select_related(
+        'complainant', 'reviewed_by_cadet', 'reviewed_by_officer', 'case'
+    ).all()
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return ComplaintCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return ComplaintUpdateSerializer
+        return ComplaintSerializer
+
+    def get_permissions(self):
+        if self.action == 'officer_review':
+            return [IsOfficer()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.has_role('Cadet'):
+            return self.queryset.filter(status=ComplaintStatus.PENDING_CADET)
+        if user.has_any_role(['Police Officer', ...]):
+            return self.queryset.filter(status=ComplaintStatus.PENDING_OFFICER)
+        return self.queryset.filter(complainant=user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        complaint = serializer.save()
+        return Response(
+            {'status': 'success', 'data': ComplaintSerializer(complaint).data, 'message': '...'},
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=True, methods=['post'], url_path='officer-reviews')
+    def officer_review(self, request, pk=None):
+        complaint = get_object_or_404(Complaint, pk=pk, status=ComplaintStatus.PENDING_OFFICER)
+        ser = OfficerReviewSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        # ... apply action, then:
+        return Response({'status': 'success', 'data': ComplaintSerializer(complaint).data})
+```
+
+Example serializers (excerpt):
+
+```python
+from rest_framework import serializers
+from core.models import Complaint
+
+class ComplaintCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Complaint
+        fields = ['title', 'description', 'incident_date', 'incident_location']
+
+    def create(self, validated_data):
+        validated_data['complainant'] = self.context['request'].user
+        validated_data['status'] = ComplaintStatus.PENDING_CADET
+        return super().create(validated_data)
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    complainant_name = serializers.CharField(source='complainant.get_full_name', read_only=True)
+
+    class Meta:
+        model = Complaint
+        fields = ['id', 'title', 'complainant', 'complainant_name', 'status', 'created_at', ...]
+
+class OfficerReviewSerializer(serializers.Serializer):
+    """Officer: approve (create case) or return to cadet."""
+    action = serializers.ChoiceField(choices=['approve', 'reject'])
+    message = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        if data['action'] == 'reject' and not data.get('message'):
+            raise serializers.ValidationError({'message': 'Message required when rejecting.'})
+        return data
+```
 
 ## Entity Models
 Model design principles:
@@ -172,6 +295,20 @@ Example error:
 - Return 403 for insufficient permissions
 - Log access attempts for security auditing
 - Use DRF's permission classes consistently
+
+## Commit Messages
+- Use imperative mood, lowercase subject (e.g. "add X", "fix Y", "change Z")
+- Prefer the structured format when scope is clear: `type[scope]: short description`
+  - Types: `feat`, `fix`, `doc`, `build`, `refactor` (use `refactor` for "change X into Y" style)
+  - Scope: area affected, e.g. `models`, `project`, `AI`, or app name
+- Short commits may use the simple form: "add reward", "add evidence", "corrected django"
+- Keep subject line under ~72 characters; add a body line only when needed for context (e.g. "not sure what was the problem")
+- Do not add a trailing period to the subject line
+
+Examples:
+- `feat[models]: add initial models placeholders`
+- `doc[AI]: add ai rules`
+
 
 ## General Guidelines
 - Write code as if a human developer would write it - natural and straightforward
