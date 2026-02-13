@@ -1,6 +1,8 @@
 # Re-export from accounts so existing imports (from core.permissions import ...) keep working.
 from accounts.permissions import (
     HasRole,
+    HasPermission,
+    HasAnyRole,
     IsSystemAdmin,
     IsPoliceChief,
     IsCaptain,
@@ -20,6 +22,8 @@ from accounts.permissions import (
 
 __all__ = [
     'HasRole',
+    'HasPermission',
+    'HasAnyRole',
     'IsSystemAdmin',
     'IsPoliceChief',
     'IsCaptain',

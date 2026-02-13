@@ -3,6 +3,14 @@ from django.contrib.auth.admin import UserAdmin
 
 from core.models import Role, UserProfile
 
+from accounts.models import ActionPermission
+
+
+@admin.register(ActionPermission)
+class ActionPermissionAdmin(admin.ModelAdmin):
+    list_display = ['codename', 'name', 'created_at']
+    search_fields = ['codename', 'name']
+
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):

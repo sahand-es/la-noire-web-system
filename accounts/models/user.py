@@ -9,6 +9,12 @@ class Role(BaseModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    permissions = models.ManyToManyField(
+        'accounts.ActionPermission',
+        related_name='roles',
+        blank=True,
+        help_text='Action permissions granted to this role (RBAC).',
+    )
 
     class Meta:
         ordering = ['name']
@@ -60,3 +66,12 @@ class UserProfile(AbstractUser):
 
     def has_any_role(self, role_names):
         return self.roles.filter(name__in=role_names, is_active=True).exists()
+
+    def has_perm(self, codename):
+        """True if user is superuser or any of their roles has this action permission."""
+        if self.is_superuser:
+            return True
+        return self.roles.filter(
+            is_active=True,
+            permissions__codename=codename,
+        ).exists()

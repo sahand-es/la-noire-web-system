@@ -1,3 +1,15 @@
+"""
+RBAC: database-driven permissions + role-name fallback (PROJECT-en.md §2.2).
+
+Design:
+- ActionPermission: codename (e.g. 'case.create', 'role.detective') stored in DB.
+- Role has M2M to ActionPermission. Admin can assign permissions to roles without code change.
+- Views set required_permission = 'case.create' (or required_permissions = ['a', 'b']).
+- HasPermission checks: user has any role that has that permission (or superuser).
+- Role-name classes (IsDetective, IsCadetOrOfficer, ...) remain for backward compatibility;
+  they use required_roles and can be migrated to HasPermission('role.detective') once
+  permissions are seeded.
+"""
 from rest_framework.permissions import BasePermission
 
 
@@ -5,111 +17,154 @@ def _is_superuser(user):
     return bool(user and user.is_authenticated and getattr(user, 'is_superuser', False))
 
 
-def _user_has_roles(user, roles):
+def user_has_perm(user, codename):
+    """
+    True if user is superuser or any of their roles has this action permission.
+    Works for any user model with .roles (M2M); roles must have .permissions (M2M to ActionPermission).
+    """
     if not user or not user.is_authenticated:
         return False
-
     if _is_superuser(user):
         return True
+    if hasattr(user, 'has_perm'):
+        return user.has_perm(codename)
+    roles = getattr(user, 'roles', None)
+    if roles is None:
+        return False
+    return roles.filter(is_active=True, permissions__codename=codename).exists()
 
+
+def _user_has_any_role(user, roles):
+    if not user or not user.is_authenticated:
+        return False
+    if _is_superuser(user):
+        return True
     if not roles:
         return True
-
     if isinstance(roles, str):
-        roles = [roles]
+        roles = (roles,)
+    return user.has_any_role(list(roles))
 
-    return user.has_any_role(roles)
+
+# --- Permission-codename driven (DB) ---
 
 
-class HasRole(BasePermission):
+class HasPermission(BasePermission):
+    """
+    Allow access if the user has the required action permission (via their roles).
+    View must set required_permission = 'codename' or required_permissions = ['a', 'b'].
+    Permissions are stored in ActionPermission and assigned to Role in the admin.
+    """
     def has_permission(self, request, view):
-        required_roles = getattr(view, 'required_roles', [])
-        return _user_has_roles(request.user, required_roles)
+        codenames = getattr(view, 'required_permissions', None) or getattr(
+            view, 'required_permission', None
+        )
+        if codenames is None:
+            return False
+        if isinstance(codenames, str):
+            codenames = (codenames,)
+        for codename in codenames:
+            if user_has_perm(request.user, codename):
+                return True
+        return False
 
 
-class IsSystemAdmin(BasePermission):
+# --- Role-name driven (backward compatible; PROJECT-en.md user levels) ---
+
+# Single source of truth for role names (match create_default_roles)
+SYSTEM_ADMIN = 'System Administrator'
+POLICE_CHIEF = 'Police Chief'
+CAPTAIN = 'Captain'
+SERGEANT = 'Sergeant'
+DETECTIVE = 'Detective'
+POLICE_OFFICER = 'Police Officer'
+CADET = 'Cadet'
+CORONER = 'Coroner'
+JUDGE = 'Judge'
+BASE_USER = 'Base user'
+
+OFFICER_ROLES = (POLICE_OFFICER, DETECTIVE, SERGEANT, CAPTAIN, POLICE_CHIEF)
+CADET_OR_OFFICER_ROLES = (CADET,) + OFFICER_ROLES
+DETECTIVE_SERGEANT_CHIEF_ROLES = (DETECTIVE, SERGEANT, POLICE_CHIEF)
+SERGEANT_CAPTAIN_CHIEF_ROLES = (SERGEANT, CAPTAIN, POLICE_CHIEF)
+
+
+class HasAnyRole(BasePermission):
+    """Allow access if user has at least one of the given roles (view.required_roles or role_names)."""
+    role_names = ()
+
     def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'System Administrator')
+        roles = getattr(view, 'required_roles', None)
+        if roles is None:
+            roles = self.role_names
+        return _user_has_any_role(request.user, roles)
 
 
-class IsPoliceChief(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Police Chief')
+# Single-role
+class IsSystemAdmin(HasAnyRole):
+    role_names = (SYSTEM_ADMIN,)
 
 
-class IsCaptain(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Captain')
+class IsPoliceChief(HasAnyRole):
+    role_names = (POLICE_CHIEF,)
 
 
-class IsSergeant(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Sergeant')
+class IsCaptain(HasAnyRole):
+    role_names = (CAPTAIN,)
 
 
-class IsDetective(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Detective')
+class IsSergeant(HasAnyRole):
+    role_names = (SERGEANT,)
 
 
-class IsPoliceOfficer(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Police Officer')
+class IsDetective(HasAnyRole):
+    role_names = (DETECTIVE,)
 
 
-class IsCadet(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Cadet')
+class IsPoliceOfficer(HasAnyRole):
+    role_names = (POLICE_OFFICER,)
 
 
-class IsCoroner(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Coroner')
+class IsCadet(HasAnyRole):
+    role_names = (CADET,)
 
 
-class IsJudge(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, 'Judge')
+class IsCoroner(HasAnyRole):
+    role_names = (CORONER,)
 
 
+class IsJudge(HasAnyRole):
+    role_names = (JUDGE,)
+
+
+# Composite
+class IsOfficer(HasAnyRole):
+    role_names = OFFICER_ROLES
+
+
+class IsCadetOrOfficer(HasAnyRole):
+    role_names = CADET_OR_OFFICER_ROLES
+
+
+class IsPoliceRankExceptCadet(HasAnyRole):
+    role_names = OFFICER_ROLES
+
+
+class IsDetectiveOrSergeantOrChief(HasAnyRole):
+    role_names = DETECTIVE_SERGEANT_CHIEF_ROLES
+
+
+class IsSergeantOrCaptainOrChief(HasAnyRole):
+    role_names = SERGEANT_CAPTAIN_CHIEF_ROLES
+
+
+# Object-level
 class IsComplainant(BasePermission):
     def has_permission(self, request, view):
         return _is_superuser(request.user) or (request.user and request.user.is_authenticated)
 
     def has_object_permission(self, request, view, obj):
-        return _is_superuser(request.user) or obj.complainant == request.user
+        return _is_superuser(request.user) or getattr(obj, 'complainant', None) == request.user
 
 
-class IsOfficer(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, [
-            'Police Officer', 'Detective', 'Sergeant', 'Captain', 'Police Chief'
-        ])
-
-
-class IsCadetOrOfficer(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, [
-            'Cadet', 'Police Officer', 'Detective', 'Sergeant', 'Captain', 'Police Chief'
-        ])
-
-
-class IsPoliceRankExceptCadet(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, [
-            'Police Officer', 'Detective', 'Sergeant', 'Captain', 'Police Chief'
-        ])
-
-
-class IsDetectiveOrSergeantOrChief(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, [
-            'Detective', 'Sergeant', 'Police Chief'
-        ])
-
-
-class IsSergeantOrCaptainOrChief(BasePermission):
-    def has_permission(self, request, view):
-        return _user_has_roles(request.user, [
-            'Sergeant', 'Captain', 'Police Chief'
-        ])
+HasRole = HasAnyRole
