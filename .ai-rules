@@ -16,6 +16,15 @@ This project follows **PROJECT-en.md** (L.A. Noire web system, two checkpoints: 
 - Create new apps only when there's a clear domain separation
 - Keep apps focused and cohesive
 
+**Backend URLs (under `api/v1/`)** — Versioned API; aligned with PROJECT-en.md flows:
+- `api/v1/auth/` — registration, login, profile, password (accounts).
+- `api/v1/cases/`, `api/v1/complaints/` — case creation (complaint flow + crime scene).
+- `api/v1/cases/<id>/witness-testimonies/`, `.../biological-evidence/`, etc. — evidence registration (cases app).
+- `api/v1/cases/<id>/investigation/` — case resolution + suspect identification + trial: `evidence-links/`, `detective-reports/`, `suspect-links/`, `trial/` (investigation.case_urls).
+- `api/v1/investigation/notifications/`, `api/v1/investigation/intensive-pursuit/` — user notifications, intensive pursuit list (investigation app).
+- `api/v1/rewards/` — reward submission, officer/detective review, lookup (rewards app).
+- `api/v1/roles/`, `api/v1/users/` — roles and users (accounts).
+
 **Folder-based layout (per app)**  
 Use a **folder** for models, serializers, views, etc., instead of single `models.py` / `serializers.py` files. Each folder contains one module per domain and an `__init__.py` that re-exports public symbols.
 
@@ -328,9 +337,10 @@ Examples:
 - Vite for build, React, Tailwind CSS, Ant Design (antd). Do not add custom CSS files or one-off stylesheets.
 - Use only Tailwind utility classes and Ant Design components. No custom CSS (no `*.css` per component, no inline `style={{}}` for layout/spacing). Tailwind for layout (flex, grid, spacing, typography); antd for UI (Button, Form, Table, Input, etc.).
 - Prefer antd components over building from scratch. Keep the frontend simple and minimal; no extra state libraries until needed, no custom design system.
+- **Colors only via Ant Design:** Set colors only through Ant Design (theme in `frontend/src/theme.js`, applied via ConfigProvider). Do not set colors with Tailwind (no Tailwind color utilities like `bg-*`, `text-*`, `border-*` for hue). Use Tailwind only for layout, spacing, and typography; use antd components for all colored UI. Do not introduce hardcoded hex/rgb or custom CSS for colors.
 
 **Frontend project structure**
-- `frontend/src/` — entry: `main.jsx`, `App.jsx`, `index.css` (only `@import "tailwindcss";`). Add `pages/`, `components/`, `api/` (or `lib/`) when needed; keep flat until the app grows.
+- `frontend/src/` — entry: `main.jsx`, `App.jsx`, `index.css` (only `@import "tailwindcss";`), `theme.js` (Ant Design theme; only source for app colors). Add `pages/`, `components/`, `api/` (or `lib/`) when needed; keep flat until the app grows.
 - One component per file. Page components in `pages/` (e.g. `LoginPage.jsx`, `DashboardPage.jsx`). Reusable UI in `components/` (e.g. `CaseCard.jsx`).
 - API base URL via `import.meta.env.VITE_API_URL`; keep secrets in `.env` (and in .gitignore).
 
