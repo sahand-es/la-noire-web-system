@@ -87,6 +87,11 @@ class BiologicalEvidenceViewSet(CaseEvidenceMixin, viewsets.ModelViewSet):
     serializer_class = BiologicalEvidenceSerializer
     permission_classes = [IsCadetOrOfficer]
 
+    def get_permissions(self):
+        if self.action == 'coroner_approvals':
+            return [IsCoroner()]
+        return [IsCadetOrOfficer()]
+
     def get_queryset(self):
         return BiologicalEvidence.objects.filter(
             case_id=self.kwargs['case_pk']
