@@ -5,7 +5,9 @@ from .views.user import (
     UserLoginView,
     UserLogoutView,
     UserProfileView,
-    ChangePasswordView
+    ChangePasswordView,
+    RoleViewSet,
+    UserViewSet
 )
 from .views.case import CaseViewSet
 from .views.complaint import ComplaintViewSet
@@ -24,6 +26,8 @@ from .views.case_resolution import (
 from .views.reward import RewardViewSet
 
 router = DefaultRouter()
+router.register(r'roles', RoleViewSet, basename='role')
+router.register(r'users', UserViewSet, basename='user')
 router.register(r'cases', CaseViewSet, basename='case')
 router.register(r'complaints', ComplaintViewSet, basename='complaint')
 router.register(r'notifications', NotificationViewSet, basename='notification')

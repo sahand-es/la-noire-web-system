@@ -15,13 +15,9 @@ class RoleSerializer(serializers.ModelSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    """Public registration. Roles are not accepted; admin assigns roles after registration."""
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True, required=True)
-    roles = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Role.objects.filter(is_active=True),
-        required=False
-    )
 
     class Meta:
         model = UserProfile
@@ -35,7 +31,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'last_name',
             'password',
             'password_confirm',
-            'roles'
         ]
         read_only_fields = ['id']
         extra_kwargs = {
@@ -65,22 +60,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
-        roles_data = validated_data.pop('roles', [])
         password = validated_data.pop('password')
 
         user = UserProfile.objects.create(**validated_data)
         user.set_password(password)
         user.save()
 
-        if roles_data:
-            user.roles.set(roles_data)
-        else:
-            # Assign default 'Base user' role
-            default_role, _ = Role.objects.get_or_create(
-                name='Base user',
-                defaults={'description': 'Default role for registered users'}
-            )
-            user.roles.add(default_role)
+        default_role, _ = Role.objects.get_or_create(
+            name='Base user',
+            defaults={'description': 'Default role for registered users'}
+        )
+        user.roles.add(default_role)
 
         return user
 
@@ -163,4 +153,95 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is incorrect.")
         return value
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    roles = RoleSerializer(many=True, read_only=True)
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'id',
+            'username',
+            'email',
+            'phone_number',
+            'national_id',
+            'first_name',
+            'last_name',
+            'full_name',
+            'roles',
+            'is_verified',
+            'is_active',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    roles = RoleSerializer(many=True, read_only=True)
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'id',
+            'username',
+            'email',
+            'phone_number',
+            'national_id',
+            'first_name',
+            'last_name',
+            'full_name',
+            'roles',
+            'is_verified',
+            'is_active',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    roles = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Role.objects.filter(is_active=True),
+        required=False
+    )
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'email',
+            'phone_number',
+            'first_name',
+            'last_name',
+            'roles',
+            'is_verified',
+            'is_active'
+        ]
+
+    def update(self, instance, validated_data):
+        roles_data = validated_data.pop('roles', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if roles_data is not None:
+            instance.roles.set(roles_data)
+
+        return instance
+
+
+class RoleCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'description', 'is_active']
+        read_only_fields = ['id']
 
