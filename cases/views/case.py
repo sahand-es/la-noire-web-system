@@ -95,7 +95,8 @@ class CaseViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             case = serializer.save()
-            case.status = CaseStatus.OPEN
+            case.status = CaseStatus.UNDER_INVESTIGATION
+            case.save()
 
             return Response(
                 {
