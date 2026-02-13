@@ -21,17 +21,18 @@ def user_has_perm(user, codename):
     """
     True if user is superuser or any of their roles has this action permission.
     Works for any user model with .roles (M2M); roles must have .permissions (M2M to ActionPermission).
+    Checks role-based ActionPermission first; only falls back to Django's has_perm for auth permissions.
     """
     if not user or not user.is_authenticated:
         return False
     if _is_superuser(user):
         return True
+    roles = getattr(user, 'roles', None)
+    if roles is not None and roles.filter(is_active=True, permissions__codename=codename).exists():
+        return True
     if hasattr(user, 'has_perm'):
         return user.has_perm(codename)
-    roles = getattr(user, 'roles', None)
-    if roles is None:
-        return False
-    return roles.filter(is_active=True, permissions__codename=codename).exists()
+    return False
 
 
 def _user_has_any_role(user, roles):

@@ -59,7 +59,7 @@ def _involved_individuals(case):
 class TrialViewSet(viewsets.ViewSet):
     """
     Trial for a case: judge sees entire case with evidence and individuals, then records verdict/punishment.
-    One trial per case (OneToOne). URL: /core/investigation/cases/<case_pk>/trial/
+    One trial per case (OneToOne). URL: /api/v1/cases/<case_pk>/investigation/trial/
     """
     permission_classes = [IsJudge]
 

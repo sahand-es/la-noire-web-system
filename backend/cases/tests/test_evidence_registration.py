@@ -65,7 +65,7 @@ class EvidenceRegistrationTestCase(TestCase):
         self.officer = make_user('officer_ev')
         self.officer.roles.add(self.role_officer)
         self.case = make_case()
-        self.case_url = f'/core/cases/{self.case.id}'
+        self.case_url = f'/api/v1/cases/{self.case.id}'
 
     def test_all_evidence_has_title_description_registration_date_recorder(self):
         """All evidence includes title, description; has registration date and recorder (PROJECT 269-272)."""

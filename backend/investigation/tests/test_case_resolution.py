@@ -61,13 +61,13 @@ class CaseResolutionFlowTestCase(TestCase):
         )
 
     def _investigation_url(self, path=''):
-        """URL for investigation resources (evidence-links, detective-reports) under /core/investigation/cases/<id>/."""
-        base = f'/core/investigation/cases/{self.case.id}'
+        """URL for case-scoped investigation (evidence-links, detective-reports) under /api/v1/cases/<id>/investigation/."""
+        base = f'/api/v1/cases/{self.case.id}/investigation'
         return f'{base}/{path}' if path else base
 
     def _case_evidence_url(self, path):
         """URL for case evidence (cases app) e.g. other-evidence."""
-        return f'/core/cases/{self.case.id}/{path}'
+        return f'/api/v1/cases/{self.case.id}/{path}'
 
     def test_detective_creates_evidence_link_red_line(self):
         """Detective can connect related documents/evidence with a red line (evidence link)."""

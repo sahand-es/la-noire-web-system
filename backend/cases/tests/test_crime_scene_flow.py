@@ -37,7 +37,7 @@ class CrimeSceneRegistrationFlowTestCase(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.base_url = '/core/cases/'
+        self.base_url = '/api/v1/cases/'
 
         self.role_officer = Role.objects.get_or_create(name='Police Officer', defaults={'is_active': True})[0]
         self.role_sergeant = Role.objects.get_or_create(name='Sergeant', defaults={'is_active': True})[0]

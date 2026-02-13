@@ -40,7 +40,7 @@ class RewardFlowTestCase(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.rewards_url = '/core/rewards/'
+        self.rewards_url = '/api/v1/rewards/'
 
         self.role_officer = Role.objects.get_or_create(name='Police Officer', defaults={'is_active': True})[0]
         self.role_detective = Role.objects.get_or_create(name='Detective', defaults={'is_active': True})[0]

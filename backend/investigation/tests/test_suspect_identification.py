@@ -73,7 +73,7 @@ class SuspectIdentificationFlowTestCase(TestCase):
         )
 
     def _url(self, path_suffix=''):
-        base = f'/core/investigation/cases/{self.case.id}/suspect-links/{self.link.id}'
+        base = f'/api/v1/cases/{self.case.id}/investigation/suspect-links/{self.link.id}'
         return f'{base}/{path_suffix}' if path_suffix else base
 
     def test_detective_sets_guilt_score_1_to_10(self):
@@ -200,7 +200,7 @@ class SuspectIdentificationFlowTestCase(TestCase):
         self.link.sergeant_guilt_score = 7
         self.link.save()
         self.client.force_authenticate(user=self.detective)
-        resp = self.client.get(f'/core/investigation/cases/{self.case.id}/suspect-links/')
+        resp = self.client.get(f'/api/v1/cases/{self.case.id}/investigation/suspect-links/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = resp.data.get('results', resp.data) if isinstance(resp.data, dict) else resp.data
         if isinstance(data, dict) and 'results' in data:

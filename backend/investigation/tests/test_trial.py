@@ -78,7 +78,7 @@ class TrialE2ETestCase(TestCase):
         )
 
     def _trial_url(self, path=''):
-        base = f'/core/investigation/cases/{self.case.id}/trial/'
+        base = f'/api/v1/cases/{self.case.id}/investigation/trial/'
         return f'{base}{path}' if path else base
 
     def test_judge_sees_entire_case_evidence_and_individuals(self):

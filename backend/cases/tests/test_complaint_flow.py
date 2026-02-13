@@ -45,7 +45,7 @@ class ComplaintRegistrationFlowTestCase(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.base_url = '/core/complaints/'
+        self.base_url = '/api/v1/complaints/'
 
         self.role_cadet = Role.objects.get_or_create(name='Cadet', defaults={'is_active': True})[0]
         self.role_officer = Role.objects.get_or_create(name='Police Officer', defaults={'is_active': True})[0]

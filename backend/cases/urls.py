@@ -48,5 +48,6 @@ urlpatterns = [
     *case_evidence_paths('vehicle-evidence', VehicleEvidenceViewSet, 'case-vehicle-evidence', 'case-vehicle-evidence-detail'),
     *case_evidence_paths('document-evidence', DocumentEvidenceViewSet, 'case-document-evidence', 'case-document-evidence-detail'),
     *case_evidence_paths('other-evidence', OtherEvidenceViewSet, 'case-other-evidence', 'case-other-evidence-detail'),
+    path('cases/<int:case_pk>/investigation/', include('investigation.case_urls')),
     path('', include(router.urls)),
 ]

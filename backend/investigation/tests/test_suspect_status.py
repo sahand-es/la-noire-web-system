@@ -93,7 +93,7 @@ class SuspectStatusTestCase(TestCase):
     def test_intensive_pursuit_page_all_users_can_see(self):
         """Intensive Pursuit page is visible to all (authenticated) users."""
         self.client.force_authenticate(user=self.user)
-        resp = self.client.get('/core/investigation/intensive-pursuit/')
+        resp = self.client.get('/api/v1/investigation/intensive-pursuit/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = resp.data.get('results', resp.data) if isinstance(resp.data, dict) else resp.data
         if isinstance(data, dict) and 'results' in data:
@@ -128,7 +128,7 @@ class SuspectStatusTestCase(TestCase):
         SuspectCaseLink.objects.create(suspect=lower_rank, case=case2)
         # lower_rank: 40 days * 1 (LEVEL3) = 40. self.suspect: 35 * 4 = 140. So order: 140, 40.
         self.client.force_authenticate(user=self.user)
-        resp = self.client.get('/core/investigation/intensive-pursuit/')
+        resp = self.client.get('/api/v1/investigation/intensive-pursuit/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = resp.data.get('results', resp.data) if isinstance(resp.data, dict) else resp.data
         if isinstance(data, dict) and 'results' in data:

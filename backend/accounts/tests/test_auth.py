@@ -12,7 +12,7 @@ class UserRegistrationTestCase(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.registration_url = '/core/auth/registrations/'
+        self.registration_url = '/api/v1/auth/registrations/'
 
     def test_user_registration_success(self):
         """Test successful user registration"""
@@ -115,7 +115,7 @@ class UserLoginTestCase(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.login_url = '/core/auth/sessions/'
+        self.login_url = '/api/v1/auth/sessions/'
         self.user_data = {
             'username': 'john_doe',
             'email': 'john@example.com',
@@ -202,12 +202,12 @@ class RolePermissionTestCase(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.roles_url = '/core/roles/'
+        self.roles_url = '/api/v1/roles/'
 
-        # Create roles
-        self.admin_role = Role.objects.create(name='System Administrator', is_active=True)
-        self.detective_role = Role.objects.create(name='Detective', is_active=True)
-        self.cadet_role = Role.objects.create(name='Cadet', is_active=True)
+        # Create roles (get_or_create to avoid duplicate key when other tests already created them)
+        self.admin_role = Role.objects.get_or_create(name='System Administrator', defaults={'is_active': True})[0]
+        self.detective_role = Role.objects.get_or_create(name='Detective', defaults={'is_active': True})[0]
+        self.cadet_role = Role.objects.get_or_create(name='Cadet', defaults={'is_active': True})[0]
 
         # Create users
         self.admin_user = User.objects.create_user(
@@ -258,10 +258,10 @@ class UserManagementTestCase(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.users_url = '/core/users/'
+        self.users_url = '/api/v1/users/'
 
         # Create admin user
-        self.admin_role = Role.objects.create(name='System Administrator', is_active=True)
+        self.admin_role = Role.objects.get_or_create(name='System Administrator', defaults={'is_active': True})[0]
         self.admin_user = User.objects.create_user(
             username='admin',
             email='admin@example.com',
@@ -323,7 +323,7 @@ class UserManagementTestCase(APITestCase):
 
     def test_admin_can_assign_roles(self):
         """Test admin can assign roles to a user"""
-        role = Role.objects.create(name='Detective', is_active=True)
+        role = Role.objects.get_or_create(name='Detective', defaults={'is_active': True})[0]
         user = User.objects.create_user(
             username='test_user',
             email='test@example.com',
@@ -351,10 +351,9 @@ class RoleTestCase(TestCase):
 
     def test_role_creation(self):
         """Test role creation"""
-        role = Role.objects.create(
+        role, _ = Role.objects.get_or_create(
             name='Test Role',
-            description='A test role',
-            is_active=True
+            defaults={'description': 'A test role', 'is_active': True}
         )
 
         self.assertEqual(role.name, 'Test Role')
@@ -363,10 +362,10 @@ class RoleTestCase(TestCase):
 
     def test_role_uniqueness(self):
         """Test role name uniqueness"""
-        Role.objects.create(name='Test Role', is_active=True)
+        Role.objects.get_or_create(name='Test Role Uniqueness', defaults={'is_active': True})
 
         with self.assertRaises(Exception):
-            Role.objects.create(name='Test Role', is_active=True)
+            Role.objects.create(name='Test Role Uniqueness', is_active=True)
 
 
 class UserModelTestCase(TestCase):
@@ -390,7 +389,7 @@ class UserModelTestCase(TestCase):
 
     def test_user_has_role(self):
         """Test has_role method"""
-        role = Role.objects.create(name='Detective', is_active=True)
+        role = Role.objects.get_or_create(name='Detective', defaults={'is_active': True})[0]
         self.user.roles.add(role)
 
         self.assertTrue(self.user.has_role('Detective'))
@@ -398,8 +397,8 @@ class UserModelTestCase(TestCase):
 
     def test_user_has_any_role(self):
         """Test has_any_role method"""
-        role1 = Role.objects.create(name='Detective', is_active=True)
-        role2 = Role.objects.create(name='Sergeant', is_active=True)
+        role1 = Role.objects.get_or_create(name='Detective', defaults={'is_active': True})[0]
+        role2 = Role.objects.get_or_create(name='Sergeant', defaults={'is_active': True})[0]
         self.user.roles.add(role1)
 
         self.assertTrue(self.user.has_any_role(['Detective', 'Cadet']))
