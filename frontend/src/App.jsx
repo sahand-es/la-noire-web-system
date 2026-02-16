@@ -1,11 +1,17 @@
-import { Button } from "antd";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Home } from "./HomePage/Home";
+import { Login } from "./Auth/Login";
+import { Register } from "./Auth/Register";
 
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Home />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
