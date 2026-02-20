@@ -84,4 +84,30 @@ export function del(path) {
   );
 }
 
+/**
+ * Public GET request - never sends authentication headers.
+ * Use this for public endpoints that don't require authentication.
+ */
+export function getPublic(path) {
+  const h = { Accept: "application/json" };
+  return fetch(url(path), { method: "GET", headers: h }).then(handleResponse);
+}
+
+/**
+ * Public POST request - never sends authentication headers.
+ * Use this for authentication endpoints (login, register) where sending
+ * an expired token would cause 401 before the endpoint can process the request.
+ */
+export function postPublic(path, body) {
+  const h = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  return fetch(url(path), {
+    method: "POST",
+    headers: h,
+    body: body != null ? JSON.stringify(body) : undefined,
+  }).then(handleResponse);
+}
+
 export { getToken };

@@ -26,6 +26,9 @@ export function Home() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const isLoggedIn =
+    localStorage.getItem("access_token") && localStorage.getItem("user");
+
   useEffect(() => {
     async function fetchStatistics() {
       try {
@@ -60,16 +63,28 @@ export function Home() {
           </div>
 
           <div className="flex gap-4">
-            <Button
-              type="primary"
-              size="large"
-              onClick={() => navigate("/register")}
-            >
-              Register
-            </Button>
-            <Button size="large" onClick={() => navigate("/login")}>
-              Login
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                type="primary"
+                size="large"
+                onClick={() => navigate("/dashboard")}
+              >
+                Go to Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={() => navigate("/register")}
+                >
+                  Register
+                </Button>
+                <Button size="large" onClick={() => navigate("/login")}>
+                  Login
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

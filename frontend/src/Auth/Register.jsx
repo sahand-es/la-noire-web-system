@@ -22,8 +22,11 @@ export function Register() {
       if (data?.tokens?.refresh) {
         localStorage.setItem("refresh_token", data.tokens.refresh);
       }
+      if (data?.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
 
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err?.message || "Registration failed. Please try again.");
     } finally {

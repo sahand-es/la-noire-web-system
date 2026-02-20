@@ -2,15 +2,23 @@
  * API call functions for the backend. All HTTP goes through request.js.
  * Set API_BASE_URL in .env (e.g. http://127.0.0.1:8000/api/v1).
  */
-import { get, post, put, patch, del } from "./request.js";
+import {
+  get,
+  post,
+  put,
+  patch,
+  del,
+  getPublic,
+  postPublic,
+} from "./request.js";
 
 // --- Auth (accounts) ---
 export function register(data) {
-  return post("auth/registrations/", data);
+  return postPublic("auth/registrations/", data);
 }
 
 export function login(data) {
-  return post("auth/sessions/", data);
+  return postPublic("auth/sessions/", data);
 }
 
 export function logout() {
@@ -235,5 +243,5 @@ export function rewardLookup(nationalId, rewardCode) {
 
 // --- Public endpoints (no authentication required) ---
 export function getPublicStatistics() {
-  return get("public/statistics/");
+  return getPublic("public/statistics/");
 }
