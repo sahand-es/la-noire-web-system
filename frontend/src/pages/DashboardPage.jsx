@@ -22,6 +22,13 @@ const { Title, Text } = Typography;
 const MODULE_CONFIG = {
   "System Administrator": [
     {
+      key: "admin-panel",
+      icon: SettingOutlined,
+      title: "Admin Panel",
+      description: "Full system administration",
+      path: "/admin",
+    },
+    {
       key: "users",
       icon: UserOutlined,
       title: "User Management",

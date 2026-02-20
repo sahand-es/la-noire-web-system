@@ -28,7 +28,20 @@ export function Login() {
 
       navigate("/dashboard");
     } catch (err) {
-      setError(err?.message || "Login failed. Please try again.");
+      console.error("Login error:", err);
+      let errorMsg = err?.message || "Login failed. Please try again.";
+
+      // Provide more helpful messages for common errors
+      if (err?.status === 401) {
+        errorMsg =
+          "Invalid credentials. Please check your identifier and password.";
+      } else if (err?.status === 400 && !err?.message) {
+        errorMsg = "Please check your input and try again.";
+      } else if (err?.status === 500) {
+        errorMsg = "Server error. Please try again later.";
+      }
+
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -45,7 +58,14 @@ export function Login() {
             <Text type="secondary">Access the La Noire system</Text>
           </div>
 
-          {error ? <Alert type="error" message={error} showIcon /> : null}
+          {error ? (
+            <Alert
+              type="error"
+              message="Login Failed"
+              description={error}
+              showIcon
+            />
+          ) : null}
 
           <Form layout="vertical" onFinish={handleFinish}>
             <Form.Item

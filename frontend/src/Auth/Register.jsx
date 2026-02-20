@@ -28,7 +28,18 @@ export function Register() {
 
       navigate("/dashboard");
     } catch (err) {
-      setError(err?.message || "Registration failed. Please try again.");
+      console.error("Registration error:", err);
+      let errorMsg = err?.message || "Registration failed. Please try again.";
+
+      // Provide more helpful messages for common errors
+      if (err?.status === 400 && !err?.message) {
+        errorMsg =
+          "Please check your input. Make sure all fields are filled correctly.";
+      } else if (err?.status === 500) {
+        errorMsg = "Server error. Please try again later.";
+      }
+
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -45,7 +56,14 @@ export function Register() {
             <Text type="secondary">Register for access to the system</Text>
           </div>
 
-          {error ? <Alert type="error" message={error} showIcon /> : null}
+          {error ? (
+            <Alert
+              type="error"
+              message="Registration Failed"
+              description={error}
+              showIcon
+            />
+          ) : null}
 
           <Form layout="vertical" onFinish={handleFinish}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

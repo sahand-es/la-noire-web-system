@@ -51,6 +51,14 @@ export function getUser(id) {
   return get(`users/${id}/`);
 }
 
+export function updateUser(id, data) {
+  return put(`users/${id}/`, data);
+}
+
+export function deleteUser(id) {
+  return del(`users/${id}/`);
+}
+
 export function getMe() {
   return get("users/me/");
 }

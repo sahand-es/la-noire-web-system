@@ -25,19 +25,50 @@ async function handleResponse(res) {
   try {
     json = text ? JSON.parse(text) : {};
   } catch {
-    throw new Error(res.statusText || "Invalid response");
+    throw new Error(res.statusText || "Invalid response from server");
   }
+
+  // Success response
   if (json.status === "success") {
     return json.data;
   }
   if (res.ok && typeof json.status === "undefined") {
     return json;
   }
-  const msg =
-    json.message ||
-    json.error ||
-    res.statusText ||
-    `Request failed (${res.status})`;
+
+  // Error response - extract detailed message
+  let msg = json.message || json.error;
+
+  // Handle field-specific validation errors
+  if (!msg && json.errors) {
+    const errorMessages = [];
+    for (const [field, errors] of Object.entries(json.errors)) {
+      const fieldErrors = Array.isArray(errors) ? errors : [errors];
+      errorMessages.push(`${field}: ${fieldErrors.join(", ")}`);
+    }
+    msg = errorMessages.join("; ");
+  }
+
+  // Handle Django REST Framework validation errors
+  if (!msg && typeof json === "object" && !Array.isArray(json)) {
+    const errorMessages = [];
+    for (const [field, errors] of Object.entries(json)) {
+      if (field !== "status" && field !== "data") {
+        const fieldErrors = Array.isArray(errors) ? errors : [errors];
+        const fieldName = field.replace(/_/g, " ");
+        errorMessages.push(`${fieldName}: ${fieldErrors.join(", ")}`);
+      }
+    }
+    if (errorMessages.length > 0) {
+      msg = errorMessages.join("; ");
+    }
+  }
+
+  // Fallback to status text or generic message
+  if (!msg) {
+    msg = res.statusText || `Request failed with status ${res.status}`;
+  }
+
   const err = new Error(msg);
   err.status = res.status;
   err.response = json;

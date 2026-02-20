@@ -44,7 +44,10 @@ export function Home() {
           totalCases: stats?.total_cases || 0,
         });
       } catch (err) {
-        setError(err?.message || "Failed to load statistics");
+        console.error("Statistics error:", err);
+        const errorMsg =
+          err?.message || "Failed to load statistics. Please try again later.";
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
