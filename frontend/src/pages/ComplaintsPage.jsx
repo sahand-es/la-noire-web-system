@@ -153,17 +153,28 @@ export function ComplaintsPage() {
       key: "actions",
       width: 160,
       render: (_, r) => {
-        if (!isCadet && !isOfficer) return null;
+        if (isCadet || isOfficer) {
+          return (
+            <Button
+              onClick={() => {
+                setActiveComplaint(r);
+                setIsModalOpen(true);
+                setActionType("approve");
+                setActionMessage("");
+              }}
+            >
+              Review
+            </Button>
+          );
+        }
+
+        const status = String(r.status || "").toLowerCase();
+        const editable = status.includes("returned") || status.includes("cadet_returned");
+        if (!editable) return null;
+
         return (
-          <Button
-            onClick={() => {
-              setActiveComplaint(r);
-              setIsModalOpen(true);
-              setActionType("approve");
-              setActionMessage("");
-            }}
-          >
-            Review
+          <Button onClick={() => (window.location.href = `/complaints/${r.id}/edit`)}>
+            Edit
           </Button>
         );
       },

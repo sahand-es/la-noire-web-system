@@ -5,6 +5,11 @@ import { createComplaint } from "../api/complaints";
 
 const { Title, Paragraph } = Typography;
 
+function pickData(res) {
+  if (res && typeof res === "object" && "data" in res) return res.data;
+  return res;
+}
+
 export function NewComplaintPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,7 +17,14 @@ export function NewComplaintPage() {
   async function onFinish(values) {
     setIsSubmitting(true);
     try {
-      const created = await createComplaint(values);
+      const res = await createComplaint(values);
+      const created = pickData(res);
+
+      if (!created?.id) {
+        message.error("Complaint created, but response has no id.");
+        return;
+      }
+
       message.success("Complaint created.");
       navigate(`/complaints/${created.id}/edit`);
     } catch (err) {

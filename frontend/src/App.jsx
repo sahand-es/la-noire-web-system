@@ -17,6 +17,7 @@ import { RewardsAdmin } from "./pages/admin/RewardsAdmin";
 import { CasesPage } from "./pages/CasesPage";
 import { ComplaintsPage } from "./pages/ComplaintsPage";
 import { NewComplaintPage } from "./pages/NewComplaintPage";
+import { EditComplaintPage } from "./pages/EditComplaintPage";
 import { EvidencePage } from "./pages/EvidencePage";
 import { RewardsPage } from "./pages/RewardsPage";
 import { RewardSubmitPage } from "./pages/RewardSubmitPage";
@@ -28,8 +29,6 @@ import { ApprovalsPage } from "./pages/ApprovalsPage";
 import { DetectiveReviewsPage } from "./pages/DetectiveReviewsPage";
 import { EvidenceReviewPage } from "./pages/EvidenceReviewPage";
 import { StatisticsPage } from "./pages/StatisticsPage";
-
-import { EditComplaintPage } from "./pages/EditComplaintPage";
 
 function App() {
   return (
@@ -72,6 +71,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/complaints"
           element={
@@ -88,6 +88,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/complaints/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditComplaintPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/evidence"
           element={
@@ -195,18 +204,8 @@ function App() {
           <Route path="rewards" element={<RewardsAdmin />} />
         </Route>
       </Routes>
-      
-      <Route
-        path="/complaints/:id/edit"
-        element={
-          <ProtectedRoute>
-            <EditComplaintPage />
-          </ProtectedRoute>
-        }
-      />
     </BrowserRouter>
   );
-  
 }
 
 export default App;
