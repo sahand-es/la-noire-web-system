@@ -5,11 +5,6 @@ import { createComplaint } from "../api/complaints";
 
 const { Title, Paragraph } = Typography;
 
-function pickData(res) {
-  if (res && typeof res === "object" && "data" in res) return res.data;
-  return res;
-}
-
 export function NewComplaintPage() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,16 +12,9 @@ export function NewComplaintPage() {
   async function onFinish(values) {
     setIsSubmitting(true);
     try {
-      const res = await createComplaint(values);
-      const created = pickData(res);
-
-      if (!created?.id) {
-        message.error("Complaint created, but response has no id.");
-        return;
-      }
-
-      message.success("Complaint created.");
-      navigate(`/complaints/${created.id}/edit`);
+      await createComplaint(values);
+      message.success("Complaint submitted successfully. Pending cadet review.");
+      navigate("/complaints");
     } catch (err) {
       message.error(err.message || "Failed to create complaint.");
     } finally {
@@ -42,7 +30,7 @@ export function NewComplaintPage() {
             File a Complaint
           </Title>
           <Paragraph className="mt-2">
-            Provide accurate information. If cadet returns it, you can correct and resubmit.
+            After submitting, it goes to a cadet for review. If returned, you can edit and resubmit.
           </Paragraph>
 
           <Form layout="vertical" onFinish={onFinish}>
@@ -80,7 +68,7 @@ export function NewComplaintPage() {
 
             <div className="flex justify-end">
               <Button type="primary" htmlType="submit" loading={isSubmitting}>
-                Create
+                Submit
               </Button>
             </div>
           </Form>

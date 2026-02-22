@@ -22,10 +22,6 @@ export function updateComplaint(complaintId, body) {
   return patch(`complaints/${complaintId}/`, body);
 }
 
-export function submitComplaint(complaintId) {
-  return post(`complaints/${complaintId}/submit/`, {});
-}
-
 export function cadetReviewComplaint(complaintId, body) {
   return post(`complaints/${complaintId}/cadet-reviews/`, body);
 }

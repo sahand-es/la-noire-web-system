@@ -18,6 +18,8 @@ import {
   officerReviewComplaint,
 } from "../api/complaints";
 
+import { useNavigate } from "react-router-dom";
+
 const { Title, Text } = Typography;
 
 function normalizeResponse(data) {
@@ -40,6 +42,7 @@ function hasRole(user, roleName) {
 }
 
 export function ComplaintsPage() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
   const isCadet = hasRole(user, "Cadet");
@@ -141,9 +144,9 @@ export function ComplaintsPage() {
     { title: "Title", dataIndex: "title", key: "title", render: (v) => v || "-" },
     { title: "Status", dataIndex: "status", key: "status", width: 190, render: (v) => v || "-" },
     {
-      title: "Corrections",
-      dataIndex: "correction_count",
-      key: "correction_count",
+      title: "Rejections",
+      dataIndex: "rejection_count",
+      key: "rejection_count",
       width: 120,
       render: (v) => (typeof v === "number" ? v : "-"),
     },
@@ -173,7 +176,7 @@ export function ComplaintsPage() {
         if (!editable) return null;
 
         return (
-          <Button onClick={() => (window.location.href = `/complaints/${r.id}/edit`)}>
+          <Button onClick={() => navigate(`/complaints/${r.id}/edit`)}>
             Edit
           </Button>
         );

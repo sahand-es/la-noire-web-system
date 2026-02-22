@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
 
 from cases.models import Complaint, ComplaintStatus, Case, CaseStatus
 from cases.serializers.complaint import (
@@ -49,14 +50,15 @@ class ComplaintViewSet(viewsets.ModelViewSet):
 
         if user.has_role('Cadet'):
             return self.queryset.filter(
-                status__in=[
-                    ComplaintStatus.PENDING_CADET,
-                    ComplaintStatus.RETURNED_TO_CADET
-                ]
+                Q(status__in=[ComplaintStatus.PENDING_CADET, ComplaintStatus.RETURNED_TO_CADET]) |
+                Q(complainant=user)
             )
 
         if user.has_any_role(['Police Officer', 'Detective', 'Sergeant', 'Captain', 'Police Chief']):
-            return self.queryset.filter(status=ComplaintStatus.PENDING_OFFICER)
+            return self.queryset.filter(
+                Q(status=ComplaintStatus.PENDING_OFFICER) |
+                Q(complainant=user)
+            )
 
         return self.queryset.filter(complainant=user)
 

@@ -1,25 +1,21 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Form, Input, Space, Typography, message, Spin } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
-import { getComplaint, updateComplaint, submitComplaint } from "../api/complaints";
+import { getComplaint, updateComplaint } from "../api/complaints";
 
 const { Title, Paragraph, Text } = Typography;
 
 function canEdit(complaint) {
-  const status = complaint?.status || "";
-  return status.toLowerCase().includes("returned") || status.toLowerCase().includes("cadet_returned");
+  return complaint?.status === "RETURNED_TO_COMPLAINANT" && !complaint?.is_voided;
 }
 
 export function EditComplaintPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const [form] = Form.useForm();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [complaint, setComplaint] = useState(null);
 
   async function fetchComplaint() {
@@ -35,6 +31,7 @@ export function EditComplaintPage() {
       });
     } catch (err) {
       message.error(err.message || "Failed to load complaint.");
+      setComplaint(null);
     } finally {
       setIsLoading(false);
     }
@@ -46,35 +43,22 @@ export function EditComplaintPage() {
   }, [id]);
 
   async function onSave(values) {
+    if (!complaint) return;
+
+    if (!canEdit(complaint)) {
+      message.error("You can only edit complaints returned to you by the cadet.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       await updateComplaint(id, values);
-      message.success("Saved.");
-      fetchComplaint();
+      message.success("Saved and re-submitted to cadet.");
+      navigate("/complaints");
     } catch (err) {
       message.error(err.message || "Failed to save.");
     } finally {
       setIsSaving(false);
-    }
-  }
-
-  async function onSubmit() {
-    if (!complaint) return;
-
-    if (!canEdit(complaint)) {
-      message.error("This complaint is not editable in its current status.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await submitComplaint(id);
-      message.success("Submitted to cadet.");
-      navigate("/complaints");
-    } catch (err) {
-      message.error(err.message || "Failed to submit complaint.");
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -95,11 +79,16 @@ export function EditComplaintPage() {
               Complaint
             </Title>
             <Paragraph className="mt-2 mb-0">Not found.</Paragraph>
+            <div className="mt-3">
+              <Button onClick={() => navigate("/complaints")}>Back to complaints</Button>
+            </div>
           </Card>
         </div>
       </div>
     );
   }
+
+  const editable = canEdit(complaint);
 
   return (
     <div className="min-h-screen p-6">
@@ -118,61 +107,43 @@ export function EditComplaintPage() {
             <Text type="secondary">Status: {complaint.status || "-"}</Text>
             <div className="mt-1">
               <Text type="secondary">
-                Corrections: {typeof complaint.correction_count === "number" ? complaint.correction_count : "-"}
+                Rejections: {typeof complaint.rejection_count === "number" ? complaint.rejection_count : "-"}
               </Text>
             </div>
-
             {complaint.cadet_message ? (
               <Paragraph className="mt-2">
                 <Text strong>Cadet message:</Text> {complaint.cadet_message}
               </Paragraph>
             ) : null}
+            {!editable ? (
+              <Paragraph className="mt-2">
+                <Text type="secondary">
+                  You can only edit when the status is RETURNED_TO_COMPLAINANT (and not voided).
+                </Text>
+              </Paragraph>
+            ) : null}
           </div>
 
           <Form layout="vertical" form={form} onFinish={onSave} className="mt-4">
-            <Form.Item
-              label="Title"
-              name="title"
-              rules={[{ required: true, message: "Title is required." }]}
-            >
-              <Input disabled={!canEdit(complaint)} />
+            <Form.Item label="Title" name="title" rules={[{ required: true }]}>
+              <Input disabled={!editable} />
             </Form.Item>
 
-            <Form.Item
-              label="Description"
-              name="description"
-              rules={[{ required: true, message: "Description is required." }]}
-            >
-              <Input.TextArea rows={5} disabled={!canEdit(complaint)} />
+            <Form.Item label="Description" name="description" rules={[{ required: true }]}>
+              <Input.TextArea rows={5} disabled={!editable} />
             </Form.Item>
 
-            <Form.Item
-              label="Incident Date"
-              name="incident_date"
-              rules={[{ required: true, message: "Incident date is required." }]}
-            >
-              <Input placeholder="YYYY-MM-DD" disabled={!canEdit(complaint)} />
+            <Form.Item label="Incident Date" name="incident_date" rules={[{ required: true }]}>
+              <Input disabled={!editable} />
             </Form.Item>
 
-            <Form.Item
-              label="Incident Location"
-              name="incident_location"
-              rules={[{ required: true, message: "Incident location is required." }]}
-            >
-              <Input disabled={!canEdit(complaint)} />
+            <Form.Item label="Incident Location" name="incident_location" rules={[{ required: true }]}>
+              <Input disabled={!editable} />
             </Form.Item>
 
             <div className="flex justify-end gap-2">
-              <Button htmlType="submit" loading={isSaving} disabled={!canEdit(complaint)}>
+              <Button type="primary" htmlType="submit" loading={isSaving} disabled={!editable}>
                 Save
-              </Button>
-              <Button
-                type="primary"
-                onClick={onSubmit}
-                loading={isSubmitting}
-                disabled={!canEdit(complaint)}
-              >
-                Submit
               </Button>
             </div>
           </Form>
