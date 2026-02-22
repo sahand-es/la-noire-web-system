@@ -12,14 +12,19 @@ import {
   message,
 } from "antd";
 
-import { listComplaints, cadetReviewComplaint, officerReviewComplaint } from "../api/complaints";
-import { useAuth } from "../context/AuthContext";
+import {
+  listComplaints,
+  cadetReviewComplaint,
+  officerReviewComplaint,
+} from "../api/complaints";
 
 const { Title, Text } = Typography;
 
 function normalizeResponse(data) {
   if (Array.isArray(data)) return { rows: data, total: data.length };
-  if (data && Array.isArray(data.results)) return { rows: data.results, total: data.count ?? data.results.length };
+  if (data && Array.isArray(data.results)) {
+    return { rows: data.results, total: data.count ?? data.results.length };
+  }
   return { rows: [], total: 0 };
 }
 
@@ -31,13 +36,11 @@ function formatDate(value) {
 }
 
 function hasRole(user, roleName) {
-  const roles = user?.roles || user?.role_names || [];
-  if (Array.isArray(roles)) return roles.includes(roleName);
-  return false;
+  return (user?.roles || []).some((r) => r?.name === roleName);
 }
 
 export function ComplaintsPage() {
-  const { user } = useAuth();
+  const [user, setUser] = useState(null);
 
   const isCadet = hasRole(user, "Cadet");
   const isOfficer = hasRole(user, "Police Officer") || hasRole(user, "Patrol Officer");
@@ -57,10 +60,24 @@ export function ComplaintsPage() {
   const [actionType, setActionType] = useState("approve");
   const [actionMessage, setActionMessage] = useState("");
 
+  useEffect(() => {
+    const raw = localStorage.getItem("user");
+    if (!raw) return;
+    try {
+      setUser(JSON.parse(raw));
+    } catch (err) {
+      console.error("Failed to parse user:", err);
+    }
+  }, []);
+
   async function fetchData(nextPage = page, nextPageSize = pageSize, nextStatus = status) {
     setIsLoading(true);
     try {
-      const data = await listComplaints({ page: nextPage, pageSize: nextPageSize, status: nextStatus });
+      const data = await listComplaints({
+        page: nextPage,
+        pageSize: nextPageSize,
+        status: nextStatus,
+      });
       const normalized = normalizeResponse(data);
       setRows(normalized.rows);
       setTotal(normalized.total);
@@ -80,13 +97,15 @@ export function ComplaintsPage() {
 
   const statusOptions = useMemo(() => {
     const unique = new Set(rows.map((r) => r.status).filter(Boolean));
-    return Array.from(unique).sort().map((s) => ({ label: s, value: s }));
+    return Array.from(unique)
+      .sort()
+      .map((s) => ({ label: s, value: s }));
   }, [rows]);
 
   async function submitReview() {
     if (!activeComplaint) return;
 
-    if ((actionType === "reject" || actionType === "return") && !actionMessage.trim()) {
+    if (actionType === "reject" && !actionMessage.trim()) {
       message.error("Message is required when returning/rejecting.");
       return;
     }
@@ -121,7 +140,13 @@ export function ComplaintsPage() {
   const columns = [
     { title: "Title", dataIndex: "title", key: "title", render: (v) => v || "-" },
     { title: "Status", dataIndex: "status", key: "status", width: 190, render: (v) => v || "-" },
-    { title: "Corrections", dataIndex: "correction_count", key: "correction_count", width: 120, render: (v) => (typeof v === "number" ? v : "-") },
+    {
+      title: "Corrections",
+      dataIndex: "correction_count",
+      key: "correction_count",
+      width: 120,
+      render: (v) => (typeof v === "number" ? v : "-"),
+    },
     { title: "Created", dataIndex: "created_at", key: "created_at", width: 190, render: (v) => formatDate(v) },
     {
       title: "",

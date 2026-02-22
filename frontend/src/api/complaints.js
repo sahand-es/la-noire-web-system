@@ -1,4 +1,4 @@
-import { get, post } from "./request";
+import { get, post, patch } from "./request";
 
 export function listComplaints(params = {}) {
   const qs = new URLSearchParams();
@@ -8,6 +8,22 @@ export function listComplaints(params = {}) {
 
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
   return get(`complaints/${suffix}`);
+}
+
+export function getComplaint(complaintId) {
+  return get(`complaints/${complaintId}/`);
+}
+
+export function createComplaint(body) {
+  return post("complaints/", body);
+}
+
+export function updateComplaint(complaintId, body) {
+  return patch(`complaints/${complaintId}/`, body);
+}
+
+export function submitComplaint(complaintId) {
+  return post(`complaints/${complaintId}/submit/`, {});
 }
 
 export function cadetReviewComplaint(complaintId, body) {

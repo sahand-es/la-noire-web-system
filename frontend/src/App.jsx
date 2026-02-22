@@ -29,6 +29,8 @@ import { DetectiveReviewsPage } from "./pages/DetectiveReviewsPage";
 import { EvidenceReviewPage } from "./pages/EvidenceReviewPage";
 import { StatisticsPage } from "./pages/StatisticsPage";
 
+import { EditComplaintPage } from "./pages/EditComplaintPage";
+
 function App() {
   return (
     <BrowserRouter>
@@ -193,8 +195,18 @@ function App() {
           <Route path="rewards" element={<RewardsAdmin />} />
         </Route>
       </Routes>
+      
+      <Route
+        path="/complaints/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditComplaintPage />
+          </ProtectedRoute>
+        }
+      />
     </BrowserRouter>
   );
+  
 }
 
 export default App;
