@@ -5,7 +5,11 @@
  * Env (vite.config envPrefix exposes API_* and VITE_*):
  *   API_BASE_URL — full base URL (e.g. http://127.0.0.1:8000/api/v1)
  */
-const BASE = (import.meta.env.API_BASE_URL || "").replace(/\/$/, "");
+const BASE = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.API_BASE_URL ||
+  ""
+).replace(/\/$/, "");
 
 function getToken() {
   return localStorage.getItem("access_token") || "";
