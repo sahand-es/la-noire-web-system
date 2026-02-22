@@ -218,8 +218,13 @@ export function listNotifications() {
   return get("investigation/notifications/");
 }
 
-export function listIntensivePursuit() {
-  return get("investigation/intensive-pursuit/");
+export function listIntensivePursuit(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set("page", String(params.page));
+  if (params.pageSize) qs.set("page_size", String(params.pageSize));
+
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return get(`investigation/intensive-pursuit/${suffix}`);
 }
 
 // --- Rewards ---
