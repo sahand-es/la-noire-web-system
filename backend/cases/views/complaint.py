@@ -142,15 +142,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             if action_type == 'approve':
-                case = Case.objects.create(
-                    title=complaint.title,
-                    description=complaint.description,
-                    incident_date=complaint.incident_date,
-                    incident_location=complaint.incident_location,
-                    status=CaseStatus.OPEN
-                )
-
-                complaint.case = case
+                # Case already exists from complaint creation
                 complaint.status = ComplaintStatus.APPROVED
                 complaint.reviewed_by_officer = request.user
                 complaint.officer_message = message
@@ -159,7 +151,7 @@ class ComplaintViewSet(viewsets.ModelViewSet):
                 return Response({
                     'status': 'success',
                     'data': ComplaintSerializer(complaint).data,
-                    'message': f'Complaint approved and case #{case.id} created'
+                    'message': f'Complaint approved - case #{complaint.case.id} is now officially under investigation'
                 })
 
             else:

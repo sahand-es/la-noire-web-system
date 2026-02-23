@@ -1,4 +1,4 @@
-import { get } from "./request";
+import { get, post } from "./request";
 
 export function listCases(params = {}) {
   const qs = new URLSearchParams();
@@ -9,4 +9,8 @@ export function listCases(params = {}) {
 
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
   return get(`cases/${suffix}`);
+}
+
+export function createCase(body) {
+  return post("cases/", body);
 }

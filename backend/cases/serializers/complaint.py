@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from cases.models import Complaint
+from cases.models import Complaint, Case
 from cases.models.complaint import ComplaintStatus
+from cases.models.case import CaseStatus
 
 User = get_user_model()
 
@@ -19,8 +20,19 @@ class ComplaintCreateSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        # Create case first
+        case = Case.objects.create(
+            title=validated_data['title'],
+            description=validated_data['description'],
+            incident_date=validated_data['incident_date'],
+            incident_location=validated_data['incident_location'],
+            status=CaseStatus.OPEN
+        )
+        
+        # Link case to complaint
         validated_data['complainant'] = self.context['request'].user
         validated_data['status'] = ComplaintStatus.PENDING_CADET
+        validated_data['case'] = case
         return super().create(validated_data)
 
 

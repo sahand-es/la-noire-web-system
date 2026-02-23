@@ -13,7 +13,9 @@ export function NewComplaintPage() {
     setIsSubmitting(true);
     try {
       await createComplaint(values);
-      message.success("Complaint submitted successfully. Pending cadet review.");
+      message.success(
+        "Complaint and case created successfully. Pending cadet review.",
+      );
       navigate("/complaints");
     } catch (err) {
       message.error(err.message || "Failed to create complaint.");
@@ -30,7 +32,8 @@ export function NewComplaintPage() {
             File a Complaint
           </Title>
           <Paragraph className="mt-2">
-            After submitting, it goes to a cadet for review. If returned, you can edit and resubmit.
+            Your complaint and associated case will be created immediately. The
+            complaint then goes through cadet and officer review for validation.
           </Paragraph>
 
           <Form layout="vertical" onFinish={onFinish}>
@@ -53,7 +56,9 @@ export function NewComplaintPage() {
             <Form.Item
               label="Incident Date"
               name="incident_date"
-              rules={[{ required: true, message: "Incident date is required." }]}
+              rules={[
+                { required: true, message: "Incident date is required." },
+              ]}
             >
               <Input placeholder="YYYY-MM-DD" />
             </Form.Item>
@@ -61,7 +66,9 @@ export function NewComplaintPage() {
             <Form.Item
               label="Incident Location"
               name="incident_location"
-              rules={[{ required: true, message: "Incident location is required." }]}
+              rules={[
+                { required: true, message: "Incident location is required." },
+              ]}
             >
               <Input />
             </Form.Item>

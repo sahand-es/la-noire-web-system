@@ -71,7 +71,9 @@ class CaseViewSet(viewsets.ModelViewSet):
 
         if user.has_role('Detective'):
             queryset = queryset.filter(
-                Q(assigned_detective=user) | Q(team_members=user)
+                Q(assigned_detective=user)
+                | Q(team_members=user)
+                | Q(status__in=[CaseStatus.OPEN, CaseStatus.UNDER_INVESTIGATION])
             ).distinct()
         elif user.has_role('Cadet'):
             queryset = queryset.filter(status=CaseStatus.OPEN)

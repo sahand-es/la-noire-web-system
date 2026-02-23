@@ -7,6 +7,7 @@ import {
   Select,
   Space,
   Spin,
+  Tag,
   Table,
   Typography,
   message,
@@ -41,12 +42,25 @@ function hasRole(user, roleName) {
   return (user?.roles || []).some((r) => r?.name === roleName);
 }
 
+function canCadetReview(status) {
+  return ["PENDING_CADET", "RETURNED_TO_CADET"].includes(status);
+}
+
+function canOfficerReview(status) {
+  return status === "PENDING_OFFICER";
+}
+
+function canComplainantEdit(status) {
+  return status === "RETURNED_TO_COMPLAINANT";
+}
+
 export function ComplaintsPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
   const isCadet = hasRole(user, "Cadet");
-  const isOfficer = hasRole(user, "Police Officer") || hasRole(user, "Patrol Officer");
+  const isOfficer =
+    hasRole(user, "Police Officer") || hasRole(user, "Patrol Officer");
 
   const [isLoading, setIsLoading] = useState(true);
   const [rows, setRows] = useState([]);
@@ -73,7 +87,11 @@ export function ComplaintsPage() {
     }
   }, []);
 
-  async function fetchData(nextPage = page, nextPageSize = pageSize, nextStatus = status) {
+  async function fetchData(
+    nextPage = page,
+    nextPageSize = pageSize,
+    nextStatus = status,
+  ) {
     setIsLoading(true);
     try {
       const data = await listComplaints({
@@ -141,8 +159,34 @@ export function ComplaintsPage() {
   }
 
   const columns = [
-    { title: "Title", dataIndex: "title", key: "title", render: (v) => v || "-" },
-    { title: "Status", dataIndex: "status", key: "status", width: 190, render: (v) => v || "-" },
+    {
+      title: "Title",
+      dataIndex: "title",
+      key: "title",
+      render: (v) => v || "-",
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 190,
+      render: (v) => v || "-",
+    },
+    {
+      title: "Case",
+      dataIndex: "case",
+      key: "case",
+      width: 180,
+      render: (caseId, row) => {
+        if (caseId) {
+          return <Tag color="blue">Case #{caseId}</Tag>;
+        }
+        if (row?.status === "VOIDED") {
+          return <Tag color="red">Voided</Tag>;
+        }
+        return <Tag color="orange">Error: No Case</Tag>;
+      },
+    },
     {
       title: "Rejections",
       dataIndex: "rejection_count",
@@ -150,13 +194,31 @@ export function ComplaintsPage() {
       width: 120,
       render: (v) => (typeof v === "number" ? v : "-"),
     },
-    { title: "Created", dataIndex: "created_at", key: "created_at", width: 190, render: (v) => formatDate(v) },
+    {
+      title: "Cadet Message",
+      dataIndex: "cadet_message",
+      key: "cadet_message",
+      render: (v) => v || "-",
+    },
+    {
+      title: "Officer Message",
+      dataIndex: "officer_message",
+      key: "officer_message",
+      render: (v) => v || "-",
+    },
+    {
+      title: "Created",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 190,
+      render: (v) => formatDate(v),
+    },
     {
       title: "",
       key: "actions",
       width: 160,
       render: (_, r) => {
-        if (isCadet || isOfficer) {
+        if (isCadet && canCadetReview(r.status)) {
           return (
             <Button
               onClick={() => {
@@ -171,8 +233,22 @@ export function ComplaintsPage() {
           );
         }
 
-        const status = String(r.status || "").toLowerCase();
-        const editable = status.includes("returned") || status.includes("cadet_returned");
+        if (isOfficer && canOfficerReview(r.status)) {
+          return (
+            <Button
+              onClick={() => {
+                setActiveComplaint(r);
+                setIsModalOpen(true);
+                setActionType("approve");
+                setActionMessage("");
+              }}
+            >
+              Review
+            </Button>
+          );
+        }
+
+        const editable = canComplainantEdit(r.status);
         if (!editable) return null;
 
         return (
@@ -194,7 +270,10 @@ export function ComplaintsPage() {
                 Complaints
               </Title>
               <Space>
-                <Button onClick={() => fetchData(page, pageSize, status)} disabled={isLoading}>
+                <Button
+                  onClick={() => fetchData(page, pageSize, status)}
+                  disabled={isLoading}
+                >
                   Refresh
                 </Button>
               </Space>
@@ -251,14 +330,21 @@ export function ComplaintsPage() {
           >
             <div className="flex flex-col gap-3">
               <Text strong>{activeComplaint?.title || "-"}</Text>
-              <Text type="secondary">Status: {activeComplaint?.status || "-"}</Text>
+              <Text type="secondary">
+                Status: {activeComplaint?.status || "-"}
+              </Text>
 
               <Select
                 value={actionType}
                 onChange={setActionType}
                 options={[
                   { label: "Approve", value: "approve" },
-                  { label: "Return / Reject", value: "reject" },
+                  {
+                    label: isOfficer
+                      ? "Return to Cadet"
+                      : "Return to Complainant",
+                    value: "reject",
+                  },
                 ]}
               />
 
