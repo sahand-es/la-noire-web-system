@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Form, Input, Select, Tabs, Button, Table, Space, Spin, message } from "antd";
+import {
+  Card,
+  Form,
+  Input,
+  Select,
+  Tabs,
+  Button,
+  Table,
+  Space,
+  Spin,
+  message,
+  Checkbox,
+} from "antd";
 import { PageHeader } from "../components/PageHeader";
 import { listCases } from "../api/cases";
 import {
@@ -86,9 +98,25 @@ export function EvidencePage() {
 
   const columns = useMemo(() => {
     return [
-      { title: "Title", dataIndex: "title", key: "title", render: (v) => v || "-" },
-      { title: "Description", dataIndex: "description", key: "description", render: (v) => v || "-" },
-      { title: "Recorded At", dataIndex: "created_at", key: "created_at", width: 200, render: (v) => v || "-" },
+      {
+        title: "Title",
+        dataIndex: "title",
+        key: "title",
+        render: (v) => v || "-",
+      },
+      {
+        title: "Description",
+        dataIndex: "description",
+        key: "description",
+        render: (v) => v || "-",
+      },
+      {
+        title: "Recorded At",
+        dataIndex: "created_at",
+        key: "created_at",
+        width: 200,
+        render: (v) => v || "-",
+      },
     ];
   }, []);
 
@@ -140,7 +168,10 @@ export function EvidencePage() {
             subtitle="Select a case, then register and review evidence."
             actions={
               <Space>
-                <Button onClick={() => fetchEvidence(caseId, activeTab)} disabled={!caseId || dataLoading}>
+                <Button
+                  onClick={() => fetchEvidence(caseId, activeTab)}
+                  disabled={!caseId || dataLoading}
+                >
                   Refresh
                 </Button>
               </Space>
@@ -163,63 +194,302 @@ export function EvidencePage() {
                 allowClear
               />
             </div>
-            <Button onClick={() => fetchCases(caseSearch)} disabled={casesLoading}>
+            <Button
+              onClick={() => fetchCases(caseSearch)}
+              disabled={casesLoading}
+            >
               Reload cases
             </Button>
           </div>
         </Card>
 
         <Card>
-          <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={tabItems}
+          />
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <div className="font-medium mb-3">Add New</div>
 
               <Form layout="vertical" form={form} onFinish={onCreate}>
-                <Form.Item
-                  label="Title"
-                  name="title"
-                  rules={[{ required: true, message: "Title is required." }]}
-                >
-                  <Input />
+                <Form.Item label="Title" name="title">
+                  <Input placeholder="Auto-generated if empty" />
                 </Form.Item>
 
                 <Form.Item
                   label="Description"
                   name="description"
-                  rules={[{ required: true, message: "Description is required." }]}
+                  rules={[
+                    { required: true, message: "Description is required." },
+                  ]}
                 >
-                  <Input.TextArea rows={4} />
+                  <Input.TextArea rows={3} />
                 </Form.Item>
 
-                {activeTab === "testimony" ? (
-                  <Form.Item label="Transcript" name="transcript">
-                    <Input.TextArea rows={4} />
-                  </Form.Item>
-                ) : null}
+                <Form.Item
+                  label="Collection Location"
+                  name="location"
+                  rules={[{ required: true, message: "Location is required." }]}
+                >
+                  <Input placeholder="Address or place where evidence was collected" />
+                </Form.Item>
 
-                {activeTab === "vehicle" ? (
+                {activeTab === "testimony" && (
                   <>
-                    <Form.Item label="Model" name="model" rules={[{ required: true }]}>
+                    <Form.Item
+                      label="Witness Name"
+                      name="witness_name"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Witness name is required.",
+                        },
+                      ]}
+                    >
                       <Input />
                     </Form.Item>
-                    <Form.Item label="Color" name="color" rules={[{ required: true }]}>
-                      <Input />
+                    <Form.Item label="Witness Contact" name="witness_contact">
+                      <Input placeholder="Phone number" />
+                    </Form.Item>
+                    <Form.Item label="Witness Address" name="witness_address">
+                      <Input.TextArea rows={2} />
+                    </Form.Item>
+                    <Form.Item
+                      label="Testimony Date"
+                      name="testimony_date"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Testimony date is required.",
+                        },
+                      ]}
+                    >
+                      <Input type="datetime-local" />
+                    </Form.Item>
+                    <Form.Item
+                      label="Testimony Text"
+                      name="testimony_text"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Testimony text is required.",
+                        },
+                      ]}
+                    >
+                      <Input.TextArea
+                        rows={4}
+                        placeholder="Witness statement"
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      label="Credibility Score (1-10)"
+                      name="credibility_score"
+                      initialValue={5}
+                    >
+                      <Input type="number" min={1} max={10} />
+                    </Form.Item>
+                  </>
+                )}
+
+                {activeTab === "bio" && (
+                  <>
+                    <Form.Item
+                      label="Sample Type"
+                      name="sample_type"
+                      rules={[
+                        { required: true, message: "Sample type is required." },
+                      ]}
+                    >
+                      <Input placeholder="e.g., Blood, DNA, Hair, Fingerprint" />
+                    </Form.Item>
+                    <Form.Item
+                      label="Sample Quantity"
+                      name="sample_quantity"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Sample quantity is required.",
+                        },
+                      ]}
+                    >
+                      <Input placeholder="e.g., 5ml, 2 strands, 1 sample" />
+                    </Form.Item>
+                    <Form.Item
+                      label="Storage Location"
+                      name="storage_location"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Storage location is required.",
+                        },
+                      ]}
+                    >
+                      <Input placeholder="Where sample is stored" />
+                    </Form.Item>
+                    <Form.Item label="Lab Results" name="lab_results">
+                      <Input.TextArea rows={3} />
+                    </Form.Item>
+                    <Form.Item label="Match Details" name="match_details">
+                      <Input.TextArea rows={2} />
+                    </Form.Item>
+                  </>
+                )}
+
+                {activeTab === "vehicle" && (
+                  <>
+                    <Form.Item
+                      label="Vehicle Type"
+                      name="vehicle_type"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vehicle type is required.",
+                        },
+                      ]}
+                    >
+                      <Input placeholder="e.g., Car, Motorcycle, Truck" />
+                    </Form.Item>
+                    <Form.Item label="Make" name="make">
+                      <Input placeholder="e.g., Toyota, Honda" />
+                    </Form.Item>
+                    <Form.Item label="Model" name="model">
+                      <Input placeholder="e.g., Camry, Accord" />
+                    </Form.Item>
+                    <Form.Item label="Year" name="year">
+                      <Input type="number" placeholder="e.g., 2020" />
+                    </Form.Item>
+                    <Form.Item label="Color" name="color">
+                      <Input placeholder="Vehicle color" />
                     </Form.Item>
                     <Form.Item label="License Plate" name="license_plate">
+                      <Input placeholder="Cannot set both plate and VIN" />
+                    </Form.Item>
+                    <Form.Item label="VIN Number" name="vin_number">
+                      <Input placeholder="Cannot set both plate and VIN" />
+                    </Form.Item>
+                    <Form.Item label="Owner Name" name="owner_name">
                       <Input />
+                    </Form.Item>
+                    <Form.Item label="Condition" name="condition">
+                      <Input.TextArea
+                        rows={2}
+                        placeholder="Vehicle condition notes"
+                      />
+                    </Form.Item>
+                  </>
+                )}
+
+                {activeTab === "doc" && (
+                  <>
+                    <Form.Item
+                      label="Document Type"
+                      name="document_type"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Document type is required.",
+                        },
+                      ]}
+                    >
+                      <Input placeholder="e.g., National ID, Passport, Contract" />
+                    </Form.Item>
+                    <Form.Item label="Document Date" name="document_date">
+                      <Input type="date" />
+                    </Form.Item>
+                    <Form.Item label="Owner Full Name" name="owner_full_name">
+                      <Input placeholder="Name on the document" />
+                    </Form.Item>
+                    <Form.Item label="Issuer" name="issuer">
+                      <Input placeholder="Organization that issued document" />
+                    </Form.Item>
+                    <Form.Item label="Content Summary" name="content_summary">
+                      <Input.TextArea
+                        rows={3}
+                        placeholder="Brief description of document content"
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      label="Is Identification Document"
+                      name="is_identification_document"
+                      valuePropName="checked"
+                    >
+                      <Checkbox>
+                        This is an ID document (passport, license, etc.)
+                      </Checkbox>
+                    </Form.Item>
+                  </>
+                )}
+
+                {activeTab === "other" && (
+                  <>
+                    <Form.Item
+                      label="Item Name"
+                      name="item_name"
+                      rules={[
+                        { required: true, message: "Item name is required." },
+                      ]}
+                    >
+                      <Input placeholder="Name of the item" />
+                    </Form.Item>
+                    <Form.Item
+                      label="Item Category"
+                      name="item_category"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Item category is required.",
+                        },
+                      ]}
+                    >
+                      <Input placeholder="e.g., Weapon, Electronics, Jewelry" />
+                    </Form.Item>
+                    <Form.Item
+                      label="Physical Description"
+                      name="physical_description"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Physical description is required.",
+                        },
+                      ]}
+                    >
+                      <Input.TextArea
+                        rows={3}
+                        placeholder="Detailed physical description"
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      label="Condition"
+                      name="condition"
+                      rules={[
+                        { required: true, message: "Condition is required." },
+                      ]}
+                    >
+                      <Input placeholder="e.g., Good, Damaged, Broken" />
+                    </Form.Item>
+                    <Form.Item label="Size/Dimensions" name="size_dimensions">
+                      <Input placeholder="e.g., 10cm x 5cm x 3cm" />
+                    </Form.Item>
+                    <Form.Item label="Weight" name="weight">
+                      <Input placeholder="e.g., 500g" />
+                    </Form.Item>
+                    <Form.Item label="Material" name="material">
+                      <Input placeholder="e.g., Metal, Plastic, Wood" />
                     </Form.Item>
                     <Form.Item label="Serial Number" name="serial_number">
                       <Input />
                     </Form.Item>
                   </>
-                ) : null}
+                )}
 
-                {activeTab === "doc" ? (
-                  <Form.Item label="Fields (JSON)" name="fields_json">
-                    <Input.TextArea rows={4} placeholder='{"name":"John Doe","id":"..."}' />
-                  </Form.Item>
-                ) : null}
+                <Form.Item label="Notes" name="notes">
+                  <Input.TextArea
+                    rows={2}
+                    placeholder="Additional notes (optional)"
+                  />
+                </Form.Item>
 
                 <div className="flex justify-end">
                   <Button type="primary" htmlType="submit" disabled={!caseId}>

@@ -69,7 +69,7 @@ class WitnessTestimonyViewSet(CaseEvidenceMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         case = self.get_case()
-        instance = serializer.save(case=case)
+        instance = serializer.save()
         notify_detective_new_evidence(case, instance)
 
     def create(self, request, *args, **kwargs):
@@ -104,7 +104,7 @@ class BiologicalEvidenceViewSet(CaseEvidenceMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         case = self.get_case()
-        instance = serializer.save(case=case)
+        instance = serializer.save()
         notify_detective_new_evidence(case, instance)
 
     def create(self, request, *args, **kwargs):
@@ -155,7 +155,7 @@ class VehicleEvidenceViewSet(CaseEvidenceMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         case = self.get_case()
-        instance = serializer.save(case=case)
+        instance = serializer.save()
         notify_detective_new_evidence(case, instance)
 
     def create(self, request, *args, **kwargs):
@@ -185,7 +185,7 @@ class DocumentEvidenceViewSet(CaseEvidenceMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         case = self.get_case()
-        instance = serializer.save(case=case)
+        instance = serializer.save()
         notify_detective_new_evidence(case, instance)
 
     def create(self, request, *args, **kwargs):
@@ -215,7 +215,7 @@ class OtherEvidenceViewSet(CaseEvidenceMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         case = self.get_case()
-        instance = serializer.save(case=case)
+        instance = serializer.save()
         notify_detective_new_evidence(case, instance)
 
     def create(self, request, *args, **kwargs):
