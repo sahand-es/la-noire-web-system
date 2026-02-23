@@ -1,27 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Button,
-  Card,
-  Form,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Spin,
-  Typography,
-  message,
-} from "antd";
-import html2canvas from "html2canvas";
+import { Button, Card, Modal, Select, Space, Spin, Typography, message } from "antd";
 import { PageHeader } from "../components/PageHeader";
 import { listCases } from "../api/cases";
 import {
-  listBoardNodes,
-  createBoardNode,
-  updateBoardNode,
-  deleteBoardNode,
-  listBoardEdges,
-  createBoardEdge,
-  deleteBoardEdge,
+  listWitnessTestimonies,
+  listBiologicalEvidence,
+  listVehicleEvidence,
+  listDocumentEvidence,
+  listOtherEvidence,
+} from "../api/evidence";
+import {
+  listContentTypes,
+  listEvidenceLinks,
+  createEvidenceLink,
+  deleteEvidenceLink,
 } from "../api/detectiveBoard";
 
 const { Text } = Typography;
@@ -36,6 +28,28 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
+function posKey(caseId) {
+  return `detective_board_positions_case_${caseId}`;
+}
+
+function readPositions(caseId) {
+  const raw = localStorage.getItem(posKey(caseId));
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function writePositions(caseId, positions) {
+  localStorage.setItem(posKey(caseId), JSON.stringify(positions));
+}
+
+function evidenceLabel(e) {
+  return e.title || e.evidence_number || `Evidence #${e.id}`;
+}
+
 export function DetectiveBoardPage() {
   const boardRef = useRef(null);
 
@@ -43,18 +57,23 @@ export function DetectiveBoardPage() {
   const [caseOptions, setCaseOptions] = useState([]);
   const [caseId, setCaseId] = useState(null);
 
-  const [loading, setLoading] = useState(false);
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+  const [ctLoading, setCtLoading] = useState(true);
+  const [contentTypes, setContentTypes] = useState([]); // [{id, app_label, model}]
+  const ctByModel = useMemo(() => {
+    const m = new Map();
+    contentTypes.forEach((ct) => m.set(ct.model, ct.id));
+    return m;
+  }, [contentTypes]);
 
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [addForm] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [cards, setCards] = useState([]); // [{key, ctId, objectId, title, x, y, raw}]
+  const [links, setLinks] = useState([]); // EvidenceLink rows
+
+  const [dragging, setDragging] = useState(null); // { key, offsetX, offsetY }
 
   const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [linkFrom, setLinkFrom] = useState(null);
   const [linkTo, setLinkTo] = useState(null);
-
-  const [dragging, setDragging] = useState(null); // { id, offsetX, offsetY }
 
   async function fetchCases() {
     setCasesLoading(true);
@@ -75,20 +94,77 @@ export function DetectiveBoardPage() {
     }
   }
 
+  async function fetchContentTypes() {
+    setCtLoading(true);
+    try {
+      const res = await listContentTypes();
+      setContentTypes(normalizeList(res));
+    } catch (err) {
+      message.error(err.message || "Failed to load content types.");
+      setContentTypes([]);
+    } finally {
+      setCtLoading(false);
+    }
+  }
+
   async function fetchBoard(nextCaseId = caseId) {
     if (!nextCaseId) return;
+    if (!ctByModel.size) return;
+
     setLoading(true);
     try {
-      const [nRes, eRes] = await Promise.all([
-        listBoardNodes(nextCaseId),
-        listBoardEdges(nextCaseId),
+      const [
+        wRes,
+        bRes,
+        vRes,
+        dRes,
+        oRes,
+        linkRes,
+      ] = await Promise.all([
+        listWitnessTestimonies(nextCaseId),
+        listBiologicalEvidence(nextCaseId),
+        listVehicleEvidence(nextCaseId),
+        listDocumentEvidence(nextCaseId),
+        listOtherEvidence(nextCaseId),
+        listEvidenceLinks(nextCaseId),
       ]);
-      setNodes(normalizeList(nRes));
-      setEdges(normalizeList(eRes));
+
+      const positions = readPositions(nextCaseId);
+
+      const buildCards = (list, modelName) => {
+        const ctId = ctByModel.get(modelName);
+        return normalizeList(list).map((e, idx) => {
+          const key = `${modelName}:${e.id}`;
+          const saved = positions[key];
+          const x = saved?.x ?? 40 + (idx % 4) * 260;
+          const y = saved?.y ?? 40 + Math.floor(idx / 4) * 160;
+          return {
+            key,
+            ctId,
+            objectId: e.id,
+            title: evidenceLabel(e),
+            x,
+            y,
+            raw: e,
+            model: modelName,
+          };
+        });
+      };
+
+      const all = [
+        ...buildCards(wRes, "witnesstestimony"),
+        ...buildCards(bRes, "biologicalevidence"),
+        ...buildCards(vRes, "vehiclevidence"),
+        ...buildCards(dRes, "documentevidence"),
+        ...buildCards(oRes, "otherevidence"),
+      ];
+
+      setCards(all);
+      setLinks(normalizeList(linkRes));
     } catch (err) {
-      message.error(err.message || "Failed to load board.");
-      setNodes([]);
-      setEdges([]);
+      message.error(err.message || "Failed to load detective board.");
+      setCards([]);
+      setLinks([]);
     } finally {
       setLoading(false);
     }
@@ -96,41 +172,35 @@ export function DetectiveBoardPage() {
 
   useEffect(() => {
     fetchCases();
+    fetchContentTypes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (caseId) fetchBoard(caseId);
+    if (caseId && !ctLoading) fetchBoard(caseId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseId]);
+  }, [caseId, ctLoading]);
 
-  const nodeOptions = useMemo(
-    () =>
-      nodes.map((n) => ({
-        value: n.id,
-        label: n.title ? `${n.title} (#${n.id})` : `Node #${n.id}`,
-      })),
-    [nodes],
-  );
+  const cardByPair = useMemo(() => {
+    const m = new Map();
+    cards.forEach((c) => m.set(`${c.ctId}:${c.objectId}`, c));
+    return m;
+  }, [cards]);
 
-  function getNodeById(id) {
-    return nodes.find((n) => n.id === id);
-  }
+  const cardOptions = useMemo(() => {
+    return cards.map((c) => ({
+      value: c.key,
+      label: `${c.title} (${c.model} #${c.objectId})`,
+    }));
+  }, [cards]);
 
-  function handleMouseDown(e, node) {
+  function handleMouseDown(e, card) {
     const rect = e.currentTarget.getBoundingClientRect();
     setDragging({
-      id: node.id,
+      key: card.key,
       offsetX: e.clientX - rect.left,
       offsetY: e.clientY - rect.top,
     });
-  }
-
-  async function persistNodePosition(nodeId, x, y) {
-    try {
-      await updateBoardNode(nodeId, { x, y });
-    } catch (err) {
-      message.error(err.message || "Failed to save position.");
-    }
   }
 
   function handleMouseMove(e) {
@@ -142,57 +212,36 @@ export function DetectiveBoardPage() {
     const x = clamp(e.clientX - rect.left - dragging.offsetX, 0, rect.width - 260);
     const y = clamp(e.clientY - rect.top - dragging.offsetY, 0, rect.height - 140);
 
-    setNodes((prev) =>
-      prev.map((n) => (n.id === dragging.id ? { ...n, x, y } : n)),
-    );
+    setCards((prev) => prev.map((c) => (c.key === dragging.key ? { ...c, x, y } : c)));
   }
 
   function handleMouseUp() {
-    if (!dragging) return;
-    const moved = getNodeById(dragging.id);
+    if (!dragging || !caseId) return;
+    const moved = cards.find((c) => c.key === dragging.key);
     setDragging(null);
-    if (moved) persistNodePosition(moved.id, moved.x, moved.y);
-  }
+    if (!moved) return;
 
-  async function onAdd(values) {
-    if (!caseId) return;
-    try {
-      await createBoardNode(caseId, {
-        title: values.title,
-        content: values.content,
-        x: 40,
-        y: 40,
-      });
-      message.success("Note added.");
-      setIsAddOpen(false);
-      addForm.resetFields();
-      fetchBoard(caseId);
-    } catch (err) {
-      message.error(err.message || "Failed to add note.");
-    }
-  }
-
-  async function onDeleteNode(nodeId) {
-    try {
-      await deleteBoardNode(nodeId);
-      message.success("Deleted.");
-      fetchBoard(caseId);
-    } catch (err) {
-      message.error(err.message || "Failed to delete node.");
-    }
+    const positions = readPositions(caseId);
+    positions[moved.key] = { x: moved.x, y: moved.y };
+    writePositions(caseId, positions);
   }
 
   async function onCreateLink() {
-    if (!caseId || !linkFrom || !linkTo) {
-      message.error("Select both nodes.");
-      return;
-    }
-    if (linkFrom === linkTo) {
-      message.error("Cannot link a node to itself.");
-      return;
-    }
+    if (!caseId) return;
+    if (!linkFrom || !linkTo) return message.error("Select both items.");
+    if (linkFrom === linkTo) return message.error("Cannot link an item to itself.");
+
+    const a = cards.find((c) => c.key === linkFrom);
+    const b = cards.find((c) => c.key === linkTo);
+    if (!a || !b) return message.error("Invalid selection.");
+
     try {
-      await createBoardEdge(caseId, { from_node: linkFrom, to_node: linkTo });
+      await createEvidenceLink(caseId, {
+        from_content_type_id: a.ctId,
+        from_object_id: a.objectId,
+        to_content_type_id: b.ctId,
+        to_object_id: b.objectId,
+      });
       message.success("Link created.");
       setIsLinkOpen(false);
       setLinkFrom(null);
@@ -203,9 +252,10 @@ export function DetectiveBoardPage() {
     }
   }
 
-  async function onDeleteEdge(edgeId) {
+  async function onDeleteLink(linkId) {
+    if (!caseId) return;
     try {
-      await deleteBoardEdge(edgeId);
+      await deleteEvidenceLink(caseId, linkId);
       message.success("Link deleted.");
       fetchBoard(caseId);
     } catch (err) {
@@ -213,26 +263,11 @@ export function DetectiveBoardPage() {
     }
   }
 
-  async function exportImage() {
-    if (!boardRef.current) return;
-    try {
-      const canvas = await html2canvas(boardRef.current);
-      const link = document.createElement("a");
-      link.download = `detective-board-case-${caseId}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    } catch (err) {
-      message.error("Failed to export image.");
-    }
-  }
-
-  // Simple SVG overlay lines
   const lines = useMemo(() => {
-    const map = new Map(nodes.map((n) => [n.id, n]));
-    return edges
-      .map((e) => {
-        const a = map.get(e.from_node || e.from_node_id);
-        const b = map.get(e.to_node || e.to_node_id);
+    return links
+      .map((l) => {
+        const a = cardByPair.get(`${l.from_content_type}:${l.from_object_id}`);
+        const b = cardByPair.get(`${l.to_content_type}:${l.to_object_id}`);
         if (!a || !b) return null;
 
         const ax = (a.x || 0) + 120;
@@ -240,10 +275,10 @@ export function DetectiveBoardPage() {
         const bx = (b.x || 0) + 120;
         const by = (b.y || 0) + 50;
 
-        return { id: e.id, ax, ay, bx, by };
+        return { id: l.id, ax, ay, bx, by };
       })
       .filter(Boolean);
-  }, [nodes, edges]);
+  }, [links, cardByPair]);
 
   return (
     <div className="min-h-screen">
@@ -251,17 +286,11 @@ export function DetectiveBoardPage() {
         <Card>
           <PageHeader
             title="Detective Board"
-            subtitle="Drag notes, connect related items, and export the board."
+            subtitle="Drag evidence cards and connect related items with red lines."
             actions={
               <Space>
-                <Button onClick={exportImage} disabled={!caseId}>
-                  Export
-                </Button>
-                <Button onClick={() => setIsLinkOpen(true)} disabled={!caseId || nodes.length < 2}>
+                <Button onClick={() => setIsLinkOpen(true)} disabled={!caseId || cards.length < 2}>
                   Add link
-                </Button>
-                <Button type="primary" onClick={() => setIsAddOpen(true)} disabled={!caseId}>
-                  Add note
                 </Button>
                 <Button onClick={() => fetchBoard(caseId)} disabled={!caseId || loading}>
                   Refresh
@@ -284,12 +313,17 @@ export function DetectiveBoardPage() {
               }
             />
           </div>
+          <div className="mt-2">
+            <Text type="secondary">
+              Positions are saved locally in your browser for each case.
+            </Text>
+          </div>
         </Card>
 
         <Card>
           {!caseId ? (
             <Text type="secondary">Select a case to open the board.</Text>
-          ) : loading ? (
+          ) : loading || ctLoading ? (
             <div className="flex justify-center py-10">
               <Spin />
             </div>
@@ -304,55 +338,32 @@ export function DetectiveBoardPage() {
             >
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
                 {lines.map((l) => (
-                  <line
-                    key={l.id}
-                    x1={l.ax}
-                    y1={l.ay}
-                    x2={l.bx}
-                    y2={l.by}
-                    stroke="red"
-                    strokeWidth="2"
-                  />
+                  <line key={l.id} x1={l.ax} y1={l.ay} x2={l.bx} y2={l.by} stroke="red" strokeWidth="2" />
                 ))}
               </svg>
 
-              {nodes.map((n) => (
-                <div
-                  key={n.id}
-                  className="absolute"
-                  style={{ left: n.x || 0, top: n.y || 0, width: 240 }}
-                >
-                  <Card
-                    size="small"
-                    title={n.title || `Node #${n.id}`}
-                    extra={
-                      <Button size="small" onClick={() => onDeleteNode(n.id)}>
-                        Delete
-                      </Button>
-                    }
-                  >
-                    <div
-                      className="cursor-move select-none"
-                      onMouseDown={(e) => handleMouseDown(e, n)}
-                    >
-                      <Text>{n.content || "-"}</Text>
+              {cards.map((c) => (
+                <div key={c.key} className="absolute" style={{ left: c.x || 0, top: c.y || 0, width: 240 }}>
+                  <Card size="small" title={c.title}>
+                    <div className="cursor-move select-none" onMouseDown={(e) => handleMouseDown(e, c)}>
+                      <Text type="secondary">{c.model} #{c.objectId}</Text>
+                      <div className="mt-2">{c.raw?.description || "-"}</div>
                     </div>
                   </Card>
                 </div>
               ))}
 
-              {edges.length ? (
+              {links.length ? (
                 <div className="absolute bottom-3 left-3">
                   <Card size="small">
                     <Text strong>Links</Text>
                     <div className="mt-2 flex flex-col gap-2">
-                      {edges.map((e) => (
-                        <div key={e.id} className="flex items-center gap-2">
+                      {links.map((l) => (
+                        <div key={l.id} className="flex items-center gap-2">
                           <Text type="secondary">
-                            {(getNodeById(e.from_node || e.from_node_id)?.title || "From")} →{" "}
-                            {(getNodeById(e.to_node || e.to_node_id)?.title || "To")}
+                            {l.from_content_type_name}:{l.from_object_id} → {l.to_content_type_name}:{l.to_object_id}
                           </Text>
-                          <Button size="small" onClick={() => onDeleteEdge(e.id)}>
+                          <Button size="small" onClick={() => onDeleteLink(l.id)}>
                             Remove
                           </Button>
                         </div>
@@ -367,23 +378,6 @@ export function DetectiveBoardPage() {
       </div>
 
       <Modal
-        title="Add Note"
-        open={isAddOpen}
-        onCancel={() => setIsAddOpen(false)}
-        onOk={() => addForm.submit()}
-        okText="Add"
-      >
-        <Form layout="vertical" form={addForm} onFinish={onAdd}>
-          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="content" label="Content" rules={[{ required: true }]}>
-            <Input.TextArea rows={4} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
         title="Create Link"
         open={isLinkOpen}
         onCancel={() => setIsLinkOpen(false)}
@@ -391,20 +385,8 @@ export function DetectiveBoardPage() {
         okText="Create"
       >
         <div className="flex flex-col gap-3">
-          <Select
-            value={linkFrom}
-            onChange={setLinkFrom}
-            options={nodeOptions}
-            placeholder="From node"
-            allowClear
-          />
-          <Select
-            value={linkTo}
-            onChange={setLinkTo}
-            options={nodeOptions}
-            placeholder="To node"
-            allowClear
-          />
+          <Select value={linkFrom} onChange={setLinkFrom} options={cardOptions} placeholder="From" allowClear />
+          <Select value={linkTo} onChange={setLinkTo} options={cardOptions} placeholder="To" allowClear />
         </div>
       </Modal>
     </div>

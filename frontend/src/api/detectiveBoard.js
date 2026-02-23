@@ -1,33 +1,17 @@
-import { get, post, patch, del } from "./request";
+import { get, post, del } from "./request";
 
-export function getBoard(caseId) {
-  return get(`cases/${caseId}/investigation/board/`);
+export function listContentTypes() {
+  return get("investigation/content-types/");
 }
 
-export function listBoardNodes(caseId) {
-  return get(`cases/${caseId}/investigation/board/nodes/`);
+export function listEvidenceLinks(caseId) {
+  return get(`cases/${caseId}/investigation/evidence-links/`);
 }
 
-export function createBoardNode(caseId, body) {
-  return post(`cases/${caseId}/investigation/board/nodes/`, body);
+export function createEvidenceLink(caseId, body) {
+  return post(`cases/${caseId}/investigation/evidence-links/`, body);
 }
 
-export function updateBoardNode(nodeId, body) {
-  return patch(`investigation/board/nodes/${nodeId}/`, body);
-}
-
-export function deleteBoardNode(nodeId) {
-  return del(`investigation/board/nodes/${nodeId}/`);
-}
-
-export function listBoardEdges(caseId) {
-  return get(`cases/${caseId}/investigation/board/edges/`);
-}
-
-export function createBoardEdge(caseId, body) {
-  return post(`cases/${caseId}/investigation/board/edges/`, body);
-}
-
-export function deleteBoardEdge(edgeId) {
-  return del(`investigation/board/edges/${edgeId}/`);
+export function deleteEvidenceLink(caseId, linkId) {
+  return del(`cases/${caseId}/investigation/evidence-links/${linkId}/`);
 }
