@@ -46,16 +46,28 @@ function buildMenuItems(user) {
     { key: "/complaints", icon: <FileTextOutlined />, label: <Link to="/complaints">Complaints</Link> },
     { key: "/complaints/new", icon: <FolderOpenOutlined />, label: <Link to="/complaints/new">New Complaint</Link> },
 
-    { key: "/cases", icon: <FolderOpenOutlined />, label: <Link to="/cases">Cases</Link> },
-    { key: "/evidence", icon: <ExperimentOutlined />, label: <Link to="/evidence">Evidence</Link> },
-
     { key: "/investigation/intensive-pursuit", icon: <AimOutlined />, label: <Link to="/investigation/intensive-pursuit">Intensive Pursuit</Link> },
-
-    { key: "/rewards", icon: <TrophyOutlined />, label: <Link to="/rewards">Rewards</Link> },
-    { key: "/statistics", icon: <BarChartOutlined />, label: <Link to="/statistics">Statistics</Link> },
   ];
 
-  // Coroner-only (or roles you decide)
+  // Police-side pages (restricted)
+  const isPoliceStaff = hasAnyRole(user, [
+    "Police Officer",
+    "Patrol Officer",
+    "Detective",
+    "Sergeant",
+    "Captain",
+    "Police Chief",
+    "Cadet",
+  ]);
+
+  if (isPoliceStaff) {
+    items.push(
+      { key: "/cases", icon: <FolderOpenOutlined />, label: <Link to="/cases">Cases</Link> },
+      { key: "/evidence", icon: <ExperimentOutlined />, label: <Link to="/evidence">Evidence</Link> },
+    );
+  }
+
+  // Coroner
   if (hasRole(user, "Coroner")) {
     items.push({
       key: "/evidence-review",
@@ -64,7 +76,7 @@ function buildMenuItems(user) {
     });
   }
 
-  // Detective-only modules (later we’ll build the real pages)
+  // Detective board
   if (hasRole(user, "Detective")) {
     items.push({
       key: "/detective-board",
@@ -73,13 +85,19 @@ function buildMenuItems(user) {
     });
   }
 
-  // Admin area
+  // Judge/captain/chief reporting (keep later, but can show now)
+  if (hasAnyRole(user, ["Judge", "Captain", "Police Chief"])) {
+    items.push({ key: "/reports", icon: <FileTextOutlined />, label: <Link to="/reports">Reports</Link> });
+  }
+
+  // Rewards / Stats can be public-ish, keep visible
+  items.push(
+    { key: "/rewards", icon: <TrophyOutlined />, label: <Link to="/rewards">Rewards</Link> },
+    { key: "/statistics", icon: <BarChartOutlined />, label: <Link to="/statistics">Statistics</Link> },
+  );
+
   if (isAdmin) {
-    items.push({
-      key: "/admin",
-      icon: <SettingOutlined />,
-      label: <Link to="/admin">Admin</Link>,
-    });
+    items.push({ key: "/admin", icon: <SettingOutlined />, label: <Link to="/admin">Admin</Link> });
   }
 
   return items;
@@ -166,8 +184,7 @@ export function AppLayout() {
         <Header className="flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Button onClick={() => navigate(-1)}>Back</Button>
-            <Button onClick={() => navigate("/dashboard")}>Home</Button>
-          </div>
+            </div>
 
           <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
             <Button icon={<UserOutlined />}>
