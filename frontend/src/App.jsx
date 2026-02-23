@@ -32,6 +32,9 @@ import { ApprovalsPage } from "./pages/ApprovalsPage";
 import { DetectiveReviewsPage } from "./pages/DetectiveReviewsPage";
 import { StatisticsPage } from "./pages/StatisticsPage";
 
+import { RoleRoute } from "./components/RoleRoute";
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -65,18 +68,51 @@ function App() {
         >
           <Route path="/dashboard" element={<DashboardPage />} />
 
-          <Route path="/cases" element={<CasesPage />} />
+         <Route
+            path="/cases"
+            element={
+              <RoleRoute roles={["Cadet","Police Officer","Patrol Officer","Detective","Sergeant","Captain","Police Chief"]}>
+                <CasesPage />
+              </RoleRoute>
+            }
+          />
+
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/complaints/new" element={<NewComplaintPage />} />
           <Route path="/complaints/:id/edit" element={<EditComplaintPage />} />
 
-          <Route path="/evidence" element={<EvidencePage />} />
-          <Route path="/evidence-review" element={<EvidenceReviewPage />} />
+          <Route
+            path="/evidence"
+            element={
+              <RoleRoute roles={["Police Officer","Patrol Officer","Detective","Sergeant","Captain","Police Chief"]}>
+                <EvidencePage />
+              </RoleRoute>
+            }
+          />
+
+          
+          <Route
+            path="/evidence-review"
+            element={
+              <RoleRoute roles={["Coroner"]}>
+                <EvidenceReviewPage />
+              </RoleRoute>
+            }
+          />
 
           <Route path="/rewards" element={<RewardsPage />} />
           <Route path="/rewards/submit" element={<RewardSubmitPage />} />
 
-          <Route path="/detective-board" element={<DetectiveBoardPage />} />
+          <Route
+            path="/detective-board"
+            element={
+              <RoleRoute roles={["Detective"]}>
+                <DetectiveBoardPage />
+              </RoleRoute>
+            }
+          />    
+
+          
           <Route path="/investigation/intensive-pursuit" element={<IntensivePursuitPage />} />
 
           <Route path="/reports" element={<ReportsPage />} />
