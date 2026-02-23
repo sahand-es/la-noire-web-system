@@ -33,15 +33,15 @@ import { DetectiveReviewsPage } from "./pages/DetectiveReviewsPage";
 import { StatisticsPage } from "./pages/StatisticsPage";
 
 import { RoleRoute } from "./components/RoleRoute";
-
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-
-        <Route
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route 
           path="/login"
           element={
             <GuestRoute>
