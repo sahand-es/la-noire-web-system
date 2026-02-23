@@ -68,6 +68,32 @@ export function AdminTableView({
     const formData = { ...record };
 
     formFields.forEach((field) => {
+      if (
+        field.type === "select" &&
+        field.multiple &&
+        Array.isArray(formData[field.name])
+      ) {
+        // Special handling for roles: always map to array of IDs
+        if (field.name === "roles") {
+          formData[field.name] = formData[field.name].map((item) =>
+            item && typeof item === "object" && typeof item.id !== "undefined"
+              ? item.id
+              : item,
+          );
+        } else {
+          formData[field.name] = formData[field.name].map((item) => {
+            if (item && typeof item === "object") {
+              if (typeof item.id !== "undefined") {
+                return item.id;
+              }
+              if (typeof item.value !== "undefined") {
+                return item.value;
+              }
+            }
+            return item;
+          });
+        }
+      }
       if (field.type === "date" && formData[field.name]) {
         formData[field.name] = dayjs(formData[field.name]);
       }

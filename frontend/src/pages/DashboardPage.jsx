@@ -33,14 +33,14 @@ const MODULE_CONFIG = {
       icon: UserOutlined,
       title: "User Management",
       description: "Manage users and assign roles",
-      path: "/users",
+      path: "/admin/users",
     },
     {
       key: "roles",
       icon: TeamOutlined,
       title: "Role Management",
       description: "Manage roles and permissions",
-      path: "/roles",
+      path: "/admin/roles",
     },
     {
       key: "cases",
@@ -266,6 +266,42 @@ const MODULE_CONFIG = {
   ],
 };
 
+const ROLE_ALIASES = {
+  "system administrator": "System Administrator",
+  "system admin": "System Administrator",
+  admin: "System Administrator",
+  administrator: "System Administrator",
+  "base user": "Base user",
+};
+
+function normalizeRoleName(roleName) {
+  if (!roleName || typeof roleName !== "string") {
+    return null;
+  }
+
+  const trimmedName = roleName.trim();
+  if (!trimmedName) {
+    return null;
+  }
+
+  if (MODULE_CONFIG[trimmedName]) {
+    return trimmedName;
+  }
+
+  const lowerName = trimmedName.toLowerCase();
+  if (ROLE_ALIASES[lowerName]) {
+    return ROLE_ALIASES[lowerName];
+  }
+
+  const titleCaseName = trimmedName
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+  return MODULE_CONFIG[titleCaseName] ? titleCaseName : null;
+}
+
 export function DashboardPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -314,7 +350,10 @@ export function DashboardPage() {
   const seenKeys = new Set();
 
   user.roles?.forEach((role) => {
-    const modules = MODULE_CONFIG[role.name] || [];
+    const normalizedRoleName = normalizeRoleName(role?.name);
+    const modules = normalizedRoleName
+      ? MODULE_CONFIG[normalizedRoleName] || []
+      : [];
     modules.forEach((module) => {
       if (!seenKeys.has(module.key)) {
         seenKeys.add(module.key);
