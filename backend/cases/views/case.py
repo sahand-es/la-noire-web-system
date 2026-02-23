@@ -51,6 +51,8 @@ class CaseViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'create':
             return [IsPoliceRankExceptCadet()]
+        if self.action == 'all_names':
+            return [IsAuthenticated()]
         if self.action == 'list':
             return [IsCadetOrOfficer()]
         if self.action == 'retrieve':
@@ -280,6 +282,11 @@ class CaseViewSet(viewsets.ModelViewSet):
             'status': 'success',
             'data': serializer.data
         })
+
+    @action(detail=False, methods=['get'], url_path='all-names')
+    def all_names(self, request):
+        rows = Case.objects.order_by('-created_at').values('id', 'case_number', 'title')
+        return Response({'status': 'success', 'data': list(rows)})
 
     @action(detail=False, methods=['get'], url_path='my-cases')
     def my_cases(self, request):

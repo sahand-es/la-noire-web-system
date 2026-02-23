@@ -1,5 +1,6 @@
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -15,6 +16,7 @@ from rewards.serializers.reward import (
     RewardLookupSerializer,
     OfficerReviewSerializer,
     DetectiveReviewSerializer,
+    RewardClaimSerializer,
 )
 from accounts.permissions import IsOfficer, IsDetective, IsCadetOrOfficer
 
@@ -29,6 +31,8 @@ class RewardViewSet(viewsets.ModelViewSet):
             return RewardCreateSerializer
         if self.action in ['officer_reviews', 'detective_reviews']:
             return None
+        if self.action == 'claim_payment':
+            return RewardClaimSerializer
         if self.action == 'lookup':
             return RewardLookupSerializer
         if self.action == 'retrieve':
@@ -42,6 +46,8 @@ class RewardViewSet(viewsets.ModelViewSet):
             return [IsOfficer()]
         if self.action == 'detective_reviews':
             return [IsDetective()]
+        if self.action == 'claim_payment':
+            return [IsCadetOrOfficer()]
         if self.action == 'lookup':
             return [IsCadetOrOfficer()]
         return [IsAuthenticated()]
@@ -62,10 +68,13 @@ class RewardViewSet(viewsets.ModelViewSet):
         serializer = RewardCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         reward = serializer.save()
+        data = RewardDetailSerializer(reward).data
+        if reward.status not in (RewardStatus.READY_FOR_PAYMENT, RewardStatus.PAID):
+            data.pop('reward_code', None)
         return Response(
             {
                 'status': 'success',
-                'data': RewardDetailSerializer(reward).data,
+                'data': data,
                 'message': 'Information submitted. Pending police officer review.',
             },
             status=status.HTTP_201_CREATED
@@ -117,6 +126,15 @@ class RewardViewSet(viewsets.ModelViewSet):
                 'data': RewardDetailSerializer(reward).data,
                 'message': 'Reward submission rejected.',
             })
+
+        if not reward.case or not reward.case.assigned_detective_id:
+            return Response(
+                {
+                    'status': 'error',
+                    'message': 'Cannot send to detective queue because this case has no assigned detective.',
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         reward.status = RewardStatus.PENDING_DETECTIVE
         reward.officer_reviewed_by = request.user
@@ -209,3 +227,30 @@ class RewardViewSet(viewsets.ModelViewSet):
             'status': 'success',
             'data': RewardLookupSerializer(reward).data,
         })
+
+    @action(detail=True, methods=['post'], url_path='claim-payment')
+    def claim_payment(self, request, pk=None):
+        reward = get_object_or_404(Reward, pk=pk, is_civilian_reward=True)
+        ser = RewardClaimSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        try:
+            reward.claim_by_civilian(station_name=ser.validated_data['station_name'], verified=True)
+        except ValidationError as exc:
+            return Response(
+                {'status': 'error', 'message': str(exc)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        payment_reference = ser.validated_data.get('payment_reference', '').strip()
+        if payment_reference:
+            reward.payment_reference = payment_reference
+            reward.save(update_fields=['payment_reference', 'updated_at'])
+
+        return Response(
+            {
+                'status': 'success',
+                'data': RewardDetailSerializer(reward).data,
+                'message': 'Reward payment has been recorded as claimed.',
+            }
+        )

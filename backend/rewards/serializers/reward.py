@@ -149,3 +149,8 @@ class DetectiveReviewSerializer(serializers.Serializer):
         if data['action'] == 'reject' and not data.get('message'):
             raise serializers.ValidationError({'message': 'Message required when rejecting.'})
         return data
+
+
+class RewardClaimSerializer(serializers.Serializer):
+    station_name = serializers.CharField(max_length=100)
+    payment_reference = serializers.CharField(required=False, allow_blank=True, max_length=100)

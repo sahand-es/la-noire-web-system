@@ -14,3 +14,7 @@ export function listCases(params = {}) {
 export function createCase(body) {
   return post("cases/", body);
 }
+
+export function listAllCaseNames() {
+  return get("cases/all-names/");
+}

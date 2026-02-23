@@ -126,6 +126,36 @@ class RewardFlowTestCase(TestCase):
         self.assertEqual(reward.status, RewardStatus.PENDING_DETECTIVE)
         self.assertIn('detective', resp.data.get('message', '').lower())
 
+    def test_officer_approve_fails_when_case_has_no_assigned_detective(self):
+        """Officer approval must not move tip to detective queue if no detective is assigned."""
+        case_without_detective = Case.objects.create(
+            title='Case without detective',
+            description='Desc',
+            incident_date=timezone.now(),
+            incident_location='Somewhere',
+            status=CaseStatus.UNDER_INVESTIGATION,
+        )
+        reward = Reward.objects.create(
+            recipient=self.civilian,
+            case=case_without_detective,
+            information_submitted='Useful tip',
+            status=RewardStatus.PENDING,
+            is_civilian_reward=True,
+            amount=0,
+        )
+
+        self.client.force_authenticate(user=self.officer)
+        resp = self.client.post(
+            f'{self.rewards_url}{reward.id}/officer-reviews/',
+            {'action': 'approve', 'message': 'Send to detective.'},
+            format='json',
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('no assigned detective', resp.data.get('message', '').lower())
+        reward.refresh_from_db()
+        self.assertEqual(reward.status, RewardStatus.PENDING)
+
     def test_detective_approves_user_gets_unique_code_and_notified(self):
         """If detective approves, user is notified and given unique code to present at police dept (PROJECT 321)."""
         reward = Reward.objects.create(
@@ -191,3 +221,51 @@ class RewardFlowTestCase(TestCase):
         resp = self.client.get(f'{self.rewards_url}lookups/', {})
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('national_id', resp.data.get('message', '').lower())
+
+    def test_police_rank_can_claim_ready_reward_payment(self):
+        """Police rank can mark READY_FOR_PAYMENT reward as paid when citizen claims at station."""
+        reward = Reward.objects.create(
+            recipient=self.civilian,
+            case=self.case,
+            information_submitted='Tip',
+            status=RewardStatus.READY_FOR_PAYMENT,
+            is_civilian_reward=True,
+            amount=7500000,
+            approved_by=self.detective,
+            approved_date=timezone.now(),
+        )
+
+        self.client.force_authenticate(user=self.cadet)
+        resp = self.client.post(
+            f'{self.rewards_url}{reward.id}/claim-payment/',
+            {'station_name': 'Central Station', 'payment_reference': 'PAY-001'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        reward.refresh_from_db()
+        self.assertEqual(reward.status, RewardStatus.PAID)
+        self.assertEqual(reward.claimed_at_station, 'Central Station')
+        self.assertTrue(reward.verified_by_national_id)
+        self.assertEqual(reward.payment_reference, 'PAY-001')
+
+    def test_regular_user_cannot_claim_payment(self):
+        """Regular user cannot perform station payment claim action."""
+        reward = Reward.objects.create(
+            recipient=self.civilian,
+            case=self.case,
+            information_submitted='Tip',
+            status=RewardStatus.READY_FOR_PAYMENT,
+            is_civilian_reward=True,
+            amount=7500000,
+            approved_by=self.detective,
+            approved_date=timezone.now(),
+        )
+
+        self.client.force_authenticate(user=self.civilian)
+        resp = self.client.post(
+            f'{self.rewards_url}{reward.id}/claim-payment/',
+            {'station_name': 'Central Station'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
