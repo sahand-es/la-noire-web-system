@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, Modal, Select, Space, Spin, Typography, message } from "antd";
+import {
+  Button,
+  Card,
+  Modal,
+  Select,
+  Space,
+  Spin,
+  Typography,
+  message,
+  Tag,
+} from "antd";
 import { PageHeader } from "../components/PageHeader";
 import { listCases } from "../api/cases";
 import {
@@ -48,6 +58,28 @@ function writePositions(caseId, positions) {
 
 function evidenceLabel(e) {
   return e.title || e.evidence_number || `Evidence #${e.id}`;
+}
+
+function getEvidenceColor(modelName) {
+  const colors = {
+    witnesstestimony: "blue",
+    biologicalevidence: "magenta",
+    vehicleevidence: "cyan",
+    documentevidence: "gold",
+    otherevidence: "purple",
+  };
+  return colors[modelName] || "default";
+}
+
+function getEvidenceIcon(modelName) {
+  const icons = {
+    witnesstestimony: "👤",
+    biologicalevidence: "🧬",
+    vehicleevidence: "🚗",
+    documentevidence: "📄",
+    otherevidence: "📦",
+  };
+  return icons[modelName] || "🔍";
 }
 
 export function DetectiveBoardPage() {
@@ -113,14 +145,7 @@ export function DetectiveBoardPage() {
 
     setLoading(true);
     try {
-      const [
-        wRes,
-        bRes,
-        vRes,
-        dRes,
-        oRes,
-        linkRes,
-      ] = await Promise.all([
+      const [wRes, bRes, vRes, dRes, oRes, linkRes] = await Promise.all([
         listWitnessTestimonies(nextCaseId),
         listBiologicalEvidence(nextCaseId),
         listVehicleEvidence(nextCaseId),
@@ -133,6 +158,10 @@ export function DetectiveBoardPage() {
 
       const buildCards = (list, modelName) => {
         const ctId = ctByModel.get(modelName);
+        if (!ctId) {
+          console.warn(`Content type ID not found for model: ${modelName}`);
+          return [];
+        }
         return normalizeList(list).map((e, idx) => {
           const key = `${modelName}:${e.id}`;
           const saved = positions[key];
@@ -154,7 +183,7 @@ export function DetectiveBoardPage() {
       const all = [
         ...buildCards(wRes, "witnesstestimony"),
         ...buildCards(bRes, "biologicalevidence"),
-        ...buildCards(vRes, "vehiclevidence"),
+        ...buildCards(vRes, "vehicleevidence"),
         ...buildCards(dRes, "documentevidence"),
         ...buildCards(oRes, "otherevidence"),
       ];
@@ -177,9 +206,11 @@ export function DetectiveBoardPage() {
   }, []);
 
   useEffect(() => {
-    if (caseId && !ctLoading) fetchBoard(caseId);
+    if (caseId && !ctLoading && contentTypes.length > 0) {
+      fetchBoard(caseId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseId, ctLoading]);
+  }, [caseId, ctLoading, contentTypes]);
 
   const cardByPair = useMemo(() => {
     const m = new Map();
@@ -209,10 +240,20 @@ export function DetectiveBoardPage() {
     if (!container) return;
     const rect = container.getBoundingClientRect();
 
-    const x = clamp(e.clientX - rect.left - dragging.offsetX, 0, rect.width - 260);
-    const y = clamp(e.clientY - rect.top - dragging.offsetY, 0, rect.height - 140);
+    const x = clamp(
+      e.clientX - rect.left - dragging.offsetX,
+      0,
+      rect.width - 260,
+    );
+    const y = clamp(
+      e.clientY - rect.top - dragging.offsetY,
+      0,
+      rect.height - 140,
+    );
 
-    setCards((prev) => prev.map((c) => (c.key === dragging.key ? { ...c, x, y } : c)));
+    setCards((prev) =>
+      prev.map((c) => (c.key === dragging.key ? { ...c, x, y } : c)),
+    );
   }
 
   function handleMouseUp() {
@@ -229,11 +270,18 @@ export function DetectiveBoardPage() {
   async function onCreateLink() {
     if (!caseId) return;
     if (!linkFrom || !linkTo) return message.error("Select both items.");
-    if (linkFrom === linkTo) return message.error("Cannot link an item to itself.");
+    if (linkFrom === linkTo)
+      return message.error("Cannot link an item to itself.");
 
     const a = cards.find((c) => c.key === linkFrom);
     const b = cards.find((c) => c.key === linkTo);
     if (!a || !b) return message.error("Invalid selection.");
+
+    if (!a.ctId || !b.ctId) {
+      return message.error(
+        "Evidence type information is missing. Please refresh the page and try again.",
+      );
+    }
 
     try {
       await createEvidenceLink(caseId, {
@@ -289,10 +337,16 @@ export function DetectiveBoardPage() {
             subtitle="Drag evidence cards and connect related items with red lines."
             actions={
               <Space>
-                <Button onClick={() => setIsLinkOpen(true)} disabled={!caseId || cards.length < 2}>
+                <Button
+                  onClick={() => setIsLinkOpen(true)}
+                  disabled={!caseId || cards.length < 2}
+                >
                   Add link
                 </Button>
-                <Button onClick={() => fetchBoard(caseId)} disabled={!caseId || loading}>
+                <Button
+                  onClick={() => fetchBoard(caseId)}
+                  disabled={!caseId || loading}
+                >
                   Refresh
                 </Button>
               </Space>
@@ -309,7 +363,9 @@ export function DetectiveBoardPage() {
               allowClear
               className="min-w-96"
               filterOption={(input, option) =>
-                String(option?.label || "").toLowerCase().includes(input.toLowerCase())
+                String(option?.label || "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
             />
           </div>
@@ -331,40 +387,104 @@ export function DetectiveBoardPage() {
             <div
               ref={boardRef}
               className="relative w-full"
-              style={{ height: 650 }}
+              style={{
+                height: 650,
+                background: "linear-gradient(135deg, #f5f5dc 0%, #e8dcc4 100%)",
+              }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             >
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
                 {lines.map((l) => (
-                  <line key={l.id} x1={l.ax} y1={l.ay} x2={l.bx} y2={l.by} stroke="red" strokeWidth="2" />
+                  <g key={l.id}>
+                    <line
+                      x1={l.ax}
+                      y1={l.ay}
+                      x2={l.bx}
+                      y2={l.by}
+                      stroke="crimson"
+                      strokeWidth="2"
+                      strokeDasharray="5,5"
+                      opacity="0.6"
+                    />
+                    <line
+                      x1={l.ax}
+                      y1={l.ay}
+                      x2={l.bx}
+                      y2={l.by}
+                      stroke="crimson"
+                      strokeWidth="6"
+                      opacity="0.1"
+                    />
+                  </g>
                 ))}
               </svg>
 
               {cards.map((c) => (
-                <div key={c.key} className="absolute" style={{ left: c.x || 0, top: c.y || 0, width: 240 }}>
-                  <Card size="small" title={c.title}>
-                    <div className="cursor-move select-none" onMouseDown={(e) => handleMouseDown(e, c)}>
-                      <Text type="secondary">{c.model} #{c.objectId}</Text>
-                      <div className="mt-2">{c.raw?.description || "-"}</div>
+                <div
+                  key={c.key}
+                  className="absolute"
+                  style={{ left: c.x || 0, top: c.y || 0, width: 240 }}
+                >
+                  <Card
+                    size="small"
+                    title={
+                      <div className="flex items-center gap-2">
+                        <span>{getEvidenceIcon(c.model)}</span>
+                        <span className="flex-1 truncate">{c.title}</span>
+                      </div>
+                    }
+                    extra={
+                      <Tag color={getEvidenceColor(c.model)}>#{c.objectId}</Tag>
+                    }
+                  >
+                    <div
+                      className="cursor-move select-none"
+                      onMouseDown={(e) => handleMouseDown(e, c)}
+                    >
+                      <div className="mb-2">
+                        <Tag color={getEvidenceColor(c.model)}>
+                          {c.model.replace(/evidence$/, "")}
+                        </Tag>
+                      </div>
+                      <div className="text-sm">{c.raw?.description || "-"}</div>
                     </div>
                   </Card>
                 </div>
               ))}
 
               {links.length ? (
-                <div className="absolute bottom-3 left-3">
-                  <Card size="small">
-                    <Text strong>Links</Text>
-                    <div className="mt-2 flex flex-col gap-2">
+                <div className="absolute bottom-3 left-3 max-w-sm">
+                  <Card
+                    size="small"
+                    title={<Text strong>🔗 Evidence Links</Text>}
+                  >
+                    <div className="flex flex-col gap-2">
                       {links.map((l) => (
-                        <div key={l.id} className="flex items-center gap-2">
-                          <Text type="secondary">
-                            {l.from_content_type_name}:{l.from_object_id} → {l.to_content_type_name}:{l.to_object_id}
-                          </Text>
-                          <Button size="small" onClick={() => onDeleteLink(l.id)}>
-                            Remove
+                        <div
+                          key={l.id}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <div className="flex items-center gap-1 flex-1 min-w-0">
+                            <Tag
+                              color={getEvidenceColor(l.from_content_type_name)}
+                            >
+                              {l.from_object_id}
+                            </Tag>
+                            <span>→</span>
+                            <Tag
+                              color={getEvidenceColor(l.to_content_type_name)}
+                            >
+                              {l.to_object_id}
+                            </Tag>
+                          </div>
+                          <Button
+                            size="small"
+                            danger
+                            onClick={() => onDeleteLink(l.id)}
+                          >
+                            ×
                           </Button>
                         </div>
                       ))}
@@ -385,8 +505,20 @@ export function DetectiveBoardPage() {
         okText="Create"
       >
         <div className="flex flex-col gap-3">
-          <Select value={linkFrom} onChange={setLinkFrom} options={cardOptions} placeholder="From" allowClear />
-          <Select value={linkTo} onChange={setLinkTo} options={cardOptions} placeholder="To" allowClear />
+          <Select
+            value={linkFrom}
+            onChange={setLinkFrom}
+            options={cardOptions}
+            placeholder="From"
+            allowClear
+          />
+          <Select
+            value={linkTo}
+            onChange={setLinkTo}
+            options={cardOptions}
+            placeholder="To"
+            allowClear
+          />
         </div>
       </Modal>
     </div>

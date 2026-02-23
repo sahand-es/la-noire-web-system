@@ -24,7 +24,7 @@ from accounts.permissions import IsDetective, IsSergeant, IsDetectiveOrSergeantO
 
 # Evidence model names that can be linked on the Detective Board (must have case_id)
 EVIDENCE_MODEL_NAMES = {
-    'witnesstestimony', 'biologicalevidence', 'vehiclevidence',
+    'witnesstestimony', 'biologicalevidence', 'vehicleevidence',
     'documentevidence', 'otherevidence',
 }
 
