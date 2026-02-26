@@ -32,3 +32,7 @@ export function assignCaseDetective(caseId, detectiveId) {
 export function approveCase(caseId, action, message = "") {
   return post(`cases/${caseId}/approvals/`, { action, message });
 }
+
+export function getCaseStatistics() {
+  return get("cases/statistics/");
+}

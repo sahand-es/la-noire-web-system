@@ -23,9 +23,9 @@ export function ApprovalsPage() {
   const [selected, setSelected] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
-    const [form] = Form.useForm();
     loadCases();
   }, []);
 
@@ -43,9 +43,9 @@ export function ApprovalsPage() {
 
   function openDetails(record) {
     setSelected(record);
+    form.resetFields();
     setModalVisible(true);
   }
-      form.resetFields();
 
   async function handleAction(action, values = {}) {
     if (!selected) return;
@@ -75,9 +75,9 @@ export function ApprovalsPage() {
       key: "title",
       render: (t, r) => (
         <button
-          className="text-left text-sm text-blue-600 underline"
+          className="text-left text-sm underline"
           onClick={() => openDetails(r)}
-            className="text-left text-sm underline"
+        >
           {t}
         </button>
       ),
@@ -163,7 +163,7 @@ export function ApprovalsPage() {
               </Descriptions>
 
               <div className="mt-4">
-                <Form onFinish={handleAction} layout="vertical">
+                <Form form={form} onFinish={handleAction} layout="vertical">
                   <Form.Item name="message" label="Note (optional)">
                     <Input.TextArea
                       rows={3}
@@ -174,7 +174,14 @@ export function ApprovalsPage() {
                   <div className="flex justify-end gap-2">
                     <Popconfirm
                       title="Reject this case?"
-                      onConfirm={() => handleAction("reject", { message: "" })}
+                      onConfirm={async () => {
+                        try {
+                          const values = await form.validateFields();
+                          handleAction("reject", values);
+                        } catch (e) {
+                          // validation failed; do nothing
+                        }
+                      }}
                       okText="Yes"
                       cancelText="No"
                     >
@@ -186,10 +193,13 @@ export function ApprovalsPage() {
                     <Button
                       type="primary"
                       loading={submitting}
-                      onClick={() => {
-                        const form = document.querySelector("#approval-form");
-                        // use Form's submit via ref-less approach: call handleAction with empty message
-                        handleAction("approve", { message: "" });
+                      onClick={async () => {
+                        try {
+                          const values = await form.validateFields();
+                          handleAction("approve", values);
+                        } catch (e) {
+                          // validation failed
+                        }
                       }}
                     >
                       Approve
