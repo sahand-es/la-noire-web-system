@@ -3,8 +3,7 @@ import { Button, Card, Form, Input, Select, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { submitRewardTip } from "../api/rewards";
-import { listAllCaseNames } from "../api/cases";
-import { listIntensivePursuit } from "../api/calls";
+import { listAllCaseNames, listCaseSuspectNames } from "../api/cases";
 
 const { Paragraph } = Typography;
 
@@ -13,8 +12,10 @@ export function RewardSubmitPage() {
   const [form] = Form.useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOptionsLoading, setIsOptionsLoading] = useState(true);
+  const [isSuspectsLoading, setIsSuspectsLoading] = useState(false);
   const [caseOptions, setCaseOptions] = useState([]);
   const [suspectOptions, setSuspectOptions] = useState([]);
+  const selectedCaseId = Form.useWatch("case_id", form);
 
   function normalizeRows(data) {
     if (Array.isArray(data)) return data;
@@ -25,27 +26,15 @@ export function RewardSubmitPage() {
   async function loadOptions() {
     setIsOptionsLoading(true);
     try {
-      const [casesData, suspectsData] = await Promise.all([
-        listAllCaseNames(),
-        listIntensivePursuit({ page: 1, pageSize: 100 }),
-      ]);
+      const casesData = await listAllCaseNames();
 
       const nextCaseOptions = normalizeRows(casesData).map((caseItem) => ({
         label: `${caseItem.case_number || caseItem.id} — ${caseItem.title || "Untitled"}`,
         value: caseItem.id,
       }));
 
-      const nextSuspectOptions = normalizeRows(suspectsData)
-        .filter((suspect) => !!suspect.national_id)
-        .map((suspect) => ({
-          label:
-            `${suspect.full_name || `${suspect.first_name || ""} ${suspect.last_name || ""}`.trim() || "Unknown"}` +
-            ` — ${suspect.national_id}`,
-          value: suspect.national_id,
-        }));
-
       setCaseOptions(nextCaseOptions);
-      setSuspectOptions(nextSuspectOptions);
+      setSuspectOptions([]);
     } catch (err) {
       message.error(err.message || "Failed to load case and suspect options.");
       setCaseOptions([]);
@@ -57,7 +46,39 @@ export function RewardSubmitPage() {
 
   useEffect(() => {
     loadOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    async function loadSuspectsForCase() {
+      if (!selectedCaseId) {
+        setSuspectOptions([]);
+        form.setFieldValue("suspect_name", undefined);
+        return;
+      }
+
+      setIsSuspectsLoading(true);
+      try {
+        const suspectsData = await listCaseSuspectNames(selectedCaseId);
+        const nextSuspectOptions = normalizeRows(suspectsData).map(
+          (suspect) => ({
+            label: suspect.full_name || "Unknown",
+            value: suspect.full_name || "Unknown",
+          }),
+        );
+        setSuspectOptions(nextSuspectOptions);
+      } catch (err) {
+        message.error(
+          err.message || "Failed to load suspects for selected case.",
+        );
+        setSuspectOptions([]);
+      } finally {
+        setIsSuspectsLoading(false);
+      }
+    }
+
+    loadSuspectsForCase();
+  }, [selectedCaseId, form]);
 
   async function onFinish(values) {
     const informationParts = [];
@@ -67,10 +88,8 @@ export function RewardSubmitPage() {
     if (values.tip_type === "suspect") {
       informationParts.push("Information type: suspect");
     }
-    if (values.suspect_national_id) {
-      informationParts.push(
-        `Suspect national ID: ${values.suspect_national_id}`,
-      );
+    if (values.suspect_name) {
+      informationParts.push(`Suspect: ${values.suspect_name}`);
     }
     informationParts.push(values.description);
 
@@ -150,7 +169,7 @@ export function RewardSubmitPage() {
                 getFieldValue("tip_type") === "suspect" ? (
                   <Form.Item
                     label="Suspect"
-                    name="suspect_national_id"
+                    name="suspect_name"
                     rules={[
                       {
                         required: true,
@@ -161,7 +180,7 @@ export function RewardSubmitPage() {
                     <Select
                       placeholder="Choose a suspect"
                       options={suspectOptions}
-                      loading={isOptionsLoading}
+                      loading={isSuspectsLoading}
                       showSearch
                       allowClear
                       filterOption={(input, option) =>

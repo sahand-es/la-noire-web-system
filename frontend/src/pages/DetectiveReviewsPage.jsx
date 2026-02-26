@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
+  DatePicker,
   Descriptions,
+  Form,
   Input,
   Modal,
   Select,
@@ -16,6 +18,7 @@ import {
 import { PageHeader } from "../components/PageHeader";
 import { listCases } from "../api/cases";
 import {
+  createSuspectLink,
   listDetectiveReports,
   sergeantReviewDetectiveReport,
 } from "../api/detectiveBoard";
@@ -42,6 +45,7 @@ export function DetectiveReviewsPage() {
   const [decision, setDecision] = useState("approve");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [form] = Form.useForm();
 
   async function fetchCases() {
     setCasesLoading(true);
@@ -98,15 +102,51 @@ export function DetectiveReviewsPage() {
     if (!selected) return;
     setSubmitting(true);
     try {
-      await sergeantReviewDetectiveReport(selected.case, selected.id, {
+      const targetCaseId = selected.case || caseId;
+      if (!targetCaseId) {
+        message.error("Case is missing for this report.");
+        return;
+      }
+
+      let suspectPayload = null;
+      if (decision === "approve") {
+        const values = await form.validateFields();
+        suspectPayload = {
+          first_name: values.first_name,
+          last_name: values.last_name,
+          national_id: values.national_id,
+          date_of_birth: values.date_of_birth
+            ? values.date_of_birth.format("YYYY-MM-DD")
+            : undefined,
+          phone_number: values.phone_number || "",
+          address: values.address || "",
+          criminal_history: values.criminal_history || "",
+          suspect_notes: values.suspect_notes || "",
+          role_in_crime: values.role_in_crime || "",
+          identification_method: values.identification_method || "",
+          notes: values.link_notes || "",
+        };
+      }
+
+      await sergeantReviewDetectiveReport(targetCaseId, selected.id, {
         action: decision === "approve" ? "approve" : "disagree",
         message: note || "",
       });
-      message.success("Review submitted.");
+
+      if (decision === "approve") {
+        await createSuspectLink(targetCaseId, suspectPayload);
+        message.success(
+          "Review submitted. Suspect created and linked to case.",
+        );
+      } else {
+        message.success("Review submitted.");
+      }
+
       setIsModalOpen(false);
       setSelected(null);
       setNote("");
       setDecision("approve");
+      form.resetFields();
       fetchReports();
     } catch (err) {
       message.error(err.message || "Failed to submit review.");
@@ -155,6 +195,7 @@ export function DetectiveReviewsPage() {
                 setIsModalOpen(true);
                 setDecision("approve");
                 setNote("");
+                form.resetFields();
               }}
             >
               Review
@@ -215,7 +256,10 @@ export function DetectiveReviewsPage() {
               : "Review Report"
           }
           open={isModalOpen}
-          onCancel={() => setIsModalOpen(false)}
+          onCancel={() => {
+            setIsModalOpen(false);
+            form.resetFields();
+          }}
           onOk={submitReview}
           confirmLoading={submitting}
         >
@@ -258,6 +302,74 @@ export function DetectiveReviewsPage() {
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Message (optional)"
               />
+
+              {decision === "approve" ? (
+                <Form
+                  form={form}
+                  layout="vertical"
+                  className="mt-2"
+                  initialValues={{ identification_method: "Sergeant review" }}
+                >
+                  <Form.Item
+                    label="First name"
+                    name="first_name"
+                    rules={[
+                      { required: true, message: "First name is required." },
+                    ]}
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item
+                    label="Last name"
+                    name="last_name"
+                    rules={[
+                      { required: true, message: "Last name is required." },
+                    ]}
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item
+                    label="National ID"
+                    name="national_id"
+                    rules={[
+                      { required: true, message: "National ID is required." },
+                      {
+                        pattern: /^\d{10}$/,
+                        message: "National ID must be 10 digits.",
+                      },
+                    ]}
+                  >
+                    <Input maxLength={10} />
+                  </Form.Item>
+                  <Form.Item label="Date of birth" name="date_of_birth">
+                    <DatePicker className="w-full" />
+                  </Form.Item>
+                  <Form.Item label="Phone number" name="phone_number">
+                    <Input maxLength={11} />
+                  </Form.Item>
+                  <Form.Item label="Address" name="address">
+                    <Input.TextArea rows={2} />
+                  </Form.Item>
+                  <Form.Item label="Criminal history" name="criminal_history">
+                    <Input.TextArea rows={2} />
+                  </Form.Item>
+                  <Form.Item label="Suspect notes" name="suspect_notes">
+                    <Input.TextArea rows={2} />
+                  </Form.Item>
+                  <Form.Item label="Role in crime" name="role_in_crime">
+                    <Input />
+                  </Form.Item>
+                  <Form.Item
+                    label="Identification method"
+                    name="identification_method"
+                  >
+                    <Input />
+                  </Form.Item>
+                  <Form.Item label="Case link notes" name="link_notes">
+                    <Input.TextArea rows={2} />
+                  </Form.Item>
+                </Form>
+              ) : null}
             </div>
           ) : null}
         </Modal>

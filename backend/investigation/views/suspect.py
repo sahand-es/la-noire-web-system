@@ -9,6 +9,7 @@ from cases.models import Case
 from investigation.models import SuspectCaseLink
 from investigation.serializers.suspect import (
     SuspectCaseLinkSerializer,
+    SuspectCaseLinkCreateSerializer,
     GuiltScoreSerializer,
     CaptainOpinionSerializer,
     ChiefApprovalSerializer,
@@ -23,7 +24,7 @@ from accounts.permissions import (
 )
 
 
-class SuspectCaseLinkViewSet(viewsets.ReadOnlyModelViewSet):
+class SuspectCaseLinkViewSet(viewsets.GenericViewSet):
     """Suspect-case links: guilt scores (detective/sergeant), captain opinion, chief approval (critical cases)."""
     serializer_class = SuspectCaseLinkSerializer
     permission_classes = [IsAuthenticated]
@@ -34,6 +35,8 @@ class SuspectCaseLinkViewSet(viewsets.ReadOnlyModelViewSet):
         ).select_related('suspect', 'case', 'captain', 'chief').order_by('-created_at')
 
     def get_permissions(self):
+        if self.action == 'create':
+            return [IsSergeant()]
         if self.action == 'detective_assessment':
             return [IsDetective()]
         if self.action == 'sergeant_assessment':
@@ -43,6 +46,28 @@ class SuspectCaseLinkViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == 'chief_approval':
             return [IsPoliceChief()]
         return [IsDetectiveOrSergeantOrChief()]
+
+    def list(self, request, case_pk=None):
+        links = self.get_queryset()
+        return Response({'status': 'success', 'data': SuspectCaseLinkSerializer(links, many=True).data})
+
+    def retrieve(self, request, case_pk=None, pk=None):
+        link = get_object_or_404(SuspectCaseLink, case_id=case_pk, pk=pk)
+        return Response({'status': 'success', 'data': SuspectCaseLinkSerializer(link).data})
+
+    def create(self, request, case_pk=None):
+        case = get_object_or_404(Case, pk=case_pk)
+        serializer = SuspectCaseLinkCreateSerializer(data=request.data, context={'case': case})
+        serializer.is_valid(raise_exception=True)
+        link = serializer.save()
+        return Response(
+            {
+                'status': 'success',
+                'data': SuspectCaseLinkSerializer(link).data,
+                'message': 'Suspect created and linked to case.',
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=True, methods=['post'], url_path='detective-assessment')
     def detective_assessment(self, request, case_pk=None, pk=None):

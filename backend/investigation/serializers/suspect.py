@@ -50,6 +50,55 @@ class SuspectCaseLinkSerializer(serializers.ModelSerializer):
         read_only_fields = ['detective_assessment_date', 'sergeant_assessment_date', 'captain_opinion_at', 'chief_approval_at']
 
 
+class SuspectCaseLinkCreateSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100)
+    national_id = serializers.CharField(max_length=10)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    phone_number = serializers.CharField(max_length=11, required=False, allow_blank=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    criminal_history = serializers.CharField(required=False, allow_blank=True)
+    suspect_notes = serializers.CharField(required=False, allow_blank=True)
+    role_in_crime = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    identification_method = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_national_id(self, value):
+        digits = ''.join(ch for ch in str(value) if ch.isdigit())
+        if len(digits) != 10:
+            raise serializers.ValidationError('National ID must be exactly 10 digits.')
+        return digits
+
+    def create(self, validated_data):
+        case = self.context['case']
+
+        suspect_defaults = {
+            'first_name': validated_data['first_name'],
+            'last_name': validated_data['last_name'],
+            'date_of_birth': validated_data.get('date_of_birth'),
+            'phone_number': validated_data.get('phone_number', ''),
+            'address': validated_data.get('address', ''),
+            'criminal_history': validated_data.get('criminal_history', ''),
+            'notes': validated_data.get('suspect_notes', ''),
+        }
+
+        suspect, _ = Suspect.objects.get_or_create(
+            national_id=validated_data['national_id'],
+            defaults=suspect_defaults,
+        )
+
+        link, _ = SuspectCaseLink.objects.get_or_create(
+            case=case,
+            suspect=suspect,
+            defaults={
+                'role_in_crime': validated_data.get('role_in_crime', ''),
+                'identification_method': validated_data.get('identification_method', ''),
+                'notes': validated_data.get('notes', ''),
+            },
+        )
+        return link
+
+
 class GuiltScoreSerializer(serializers.Serializer):
     guilt_score = serializers.IntegerField(min_value=1, max_value=10, help_text='Probability of guilt 1-10')
 

@@ -1,4 +1,4 @@
-import { get, post, put } from "./request";
+import { get, getPublic, post, put } from "./request";
 
 export function listCases(params = {}) {
   const qs = new URLSearchParams();
@@ -17,6 +17,10 @@ export function createCase(body) {
 
 export function listAllCaseNames() {
   return get("cases/all-names/");
+}
+
+export function listCaseSuspectNames(caseId) {
+  return getPublic(`cases/${caseId}/suspects/names/`);
 }
 
 export function listCaseDetectives() {

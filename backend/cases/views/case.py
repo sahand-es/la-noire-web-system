@@ -2,12 +2,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
 from cases.models import Case, CaseStatus
+from investigation.models import SuspectCaseLink
 from core.models import UserProfile
 from cases.serializers.case import (
     CaseListSerializer,
@@ -49,6 +51,8 @@ class CaseViewSet(viewsets.ModelViewSet):
         return CaseListSerializer
 
     def get_permissions(self):
+        if self.action == 'suspect_names':
+            return [AllowAny()]
         if self.action == 'create':
             return [IsPoliceRankExceptCadet()]
         if self.action == 'detectives':
@@ -309,6 +313,21 @@ class CaseViewSet(viewsets.ModelViewSet):
     def all_names(self, request):
         rows = Case.objects.order_by('-created_at').values('id', 'case_number', 'title')
         return Response({'status': 'success', 'data': list(rows)})
+
+    @action(detail=True, methods=['get'], url_path='suspects/names')
+    def suspect_names(self, request, pk=None):
+        case = get_object_or_404(Case, pk=pk)
+        links = SuspectCaseLink.objects.filter(case=case).select_related('suspect').order_by(
+            'suspect__first_name', 'suspect__last_name', 'suspect_id'
+        )
+        data = [
+            {
+                'id': link.suspect_id,
+                'full_name': link.suspect.full_name,
+            }
+            for link in links
+        ]
+        return Response({'status': 'success', 'data': data})
 
     @action(detail=False, methods=['get'], url_path='my-cases')
     def my_cases(self, request):

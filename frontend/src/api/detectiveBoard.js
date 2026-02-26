@@ -41,6 +41,10 @@ export function getSuspectLink(caseId, linkId) {
   return get(`cases/${caseId}/investigation/suspect-links/${linkId}/`);
 }
 
+export function createSuspectLink(caseId, body) {
+  return post(`cases/${caseId}/investigation/suspect-links/`, body);
+}
+
 export function assessSuspectAsDetective(caseId, linkId, body) {
   return post(
     `cases/${caseId}/investigation/suspect-links/${linkId}/detective-assessment/`,
