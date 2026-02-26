@@ -1,58 +1,26 @@
-import { useState, useEffect } from "react";
-import { Layout, Menu, Typography, Button, Dropdown, Breadcrumb } from "antd";
+import { useEffect, useState } from "react";
+import { Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
 import { Navbar } from "../../components/Navbar";
+import { AppSider } from "../../components/AppSider";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   UserOutlined,
-  FolderOpenOutlined,
-  TrophyOutlined,
-  DashboardOutlined,
   HomeOutlined,
   AppstoreOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
 
-const { Sider, Content } = Layout;
-const { Title } = Typography;
+const { Content } = Layout;
+const { Text } = Typography;
 
-const ADMIN_MENU_ITEMS = [
-  {
-    key: "/admin",
-    icon: <DashboardOutlined />,
-    label: "Dashboard",
-  },
-  {
-    key: "accounts",
-    icon: <UserOutlined />,
-    label: "Accounts",
-    children: [
-      { key: "/admin/users", label: "Users" },
-      { key: "/admin/roles", label: "Roles" },
-      { key: "/admin/permissions", label: "Permissions" },
-    ],
-  },
-  {
-    key: "cases",
-    icon: <FolderOpenOutlined />,
-    label: "Case management",
-    children: [
-      { key: "/admin/cases", label: "Cases" },
-      { key: "/admin/complaints", label: "Complaints" },
-    ],
-  },
-  {
-    key: "rewards",
-    icon: <TrophyOutlined />,
-    label: "Rewards",
-    children: [{ key: "/admin/rewards", label: "Rewards" }],
-  },
-];
-
-function getOpenKeyForPath(pathname) {
-  if (pathname.startsWith("/admin/users") || pathname.startsWith("/admin/roles") || pathname.startsWith("/admin/permissions")) return ["accounts"];
-  if (pathname.startsWith("/admin/cases") || pathname.startsWith("/admin/complaints")) return ["cases"];
-  if (pathname.startsWith("/admin/rewards")) return ["rewards"];
-  return [];
+function readUser() {
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function adminTitleForPath(pathname) {
@@ -68,7 +36,7 @@ function adminTitleForPath(pathname) {
 
 export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const [openKeys, setOpenKeys] = useState([]);
+  const [user, setUser] = useState(readUser());
   const navigate = useNavigate();
   const location = useLocation();
   const adminPageTitle = adminTitleForPath(location.pathname);
@@ -78,37 +46,48 @@ export function AdminLayout() {
     : { icon: <HomeOutlined />, to: "/admin", label: "Admin dashboard" };
 
   useEffect(() => {
-    setOpenKeys((prev) => {
-      const pathKeys = getOpenKeyForPath(location.pathname);
-      const merged = [...new Set([...prev, ...pathKeys])];
-      return merged.length ? merged : prev;
-    });
-  }, [location.pathname]);
+    function onStorage() {
+      setUser(readUser());
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const userMenu = {
+    items: [
+      {
+        key: "profile",
+        label: (
+          <div className="flex flex-col">
+            <Text strong>{user?.username || "User"}</Text>
+            <Text type="secondary">{user?.email || ""}</Text>
+          </div>
+        ),
+        icon: <UserOutlined />,
+        onClick: () => navigate("/profile"),
+      },
+      { type: "divider" },
+      {
+        key: "logout",
+        label: "Logout",
+        icon: <LogoutOutlined />,
+        onClick: () => {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("user");
+          navigate("/login");
+        },
+      },
+    ],
+  };
 
   return (
     <Layout className="h-screen overflow-hidden flex">
-      <Sider
-        theme="light"
-        collapsible
+      <AppSider
+        variant="admin"
         collapsed={collapsed}
         onCollapse={setCollapsed}
-        width={250}
-      >
-        <div className="p-4 flex items-center justify-center">
-          <Title level={4} className="m-0">
-            {collapsed ? "LA" : "LA Noire Admin"}
-          </Title>
-        </div>
-        <Menu
-          theme="light"
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          openKeys={openKeys}
-          onOpenChange={setOpenKeys}
-          items={ADMIN_MENU_ITEMS}
-          onClick={({ key }) => navigate(key)}
-        />
-      </Sider>
+      />
       <Layout className="flex-1 flex flex-col min-h-0">
         <Navbar
           start={
@@ -129,26 +108,10 @@ export function AdminLayout() {
             </>
           }
           end={
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: "logout",
-                    label: "Logout",
-                    icon: <LogoutOutlined />,
-                    onClick: () => {
-                      localStorage.removeItem("access_token");
-                      localStorage.removeItem("refresh_token");
-                      localStorage.removeItem("user");
-                      navigate("/login");
-                    },
-                  },
-                ],
-              }}
-              placement="bottomRight"
-              trigger={["click"]}
-            >
-              <Button icon={<UserOutlined />}>Account</Button>
+            <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
+              <Button icon={<UserOutlined />}>
+                {user?.username || "Account"}
+              </Button>
             </Dropdown>
           }
         />

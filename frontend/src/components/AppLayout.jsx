@@ -1,25 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Layout, Menu, Button, Typography, Dropdown, Breadcrumb } from "antd";
+import { Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
 import { Navbar } from "./Navbar";
+import { AppSider } from "./AppSider";
 import {
-  AppstoreOutlined,
-  FileTextOutlined,
-  FolderOpenOutlined,
-  ExperimentOutlined,
-  AimOutlined,
-  TrophyOutlined,
-  BarChartOutlined,
-  SafetyOutlined,
-  SettingOutlined,
   LogoutOutlined,
   UserOutlined,
-  BellOutlined,
   HomeOutlined,
   BankOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
-const { Sider, Content } = Layout;
+const { Content } = Layout;
 const { Text } = Typography;
 
 function readUser() {
@@ -30,124 +21,6 @@ function readUser() {
   } catch {
     return null;
   }
-}
-
-function hasRole(user, roleName) {
-  return (user?.roles || []).some((r) => r?.name === roleName);
-}
-
-function hasAnyRole(user, roles) {
-  return roles.some((r) => hasRole(user, r));
-}
-
-function buildMenuItems(user) {
-  const isAdmin =
-    Boolean(user?.is_superuser) || hasRole(user, "System Administrator");
-
-  const items = [
-    {
-      key: "/dashboard",
-      icon: <AppstoreOutlined />,
-      label: <Link to="/dashboard">Dashboard</Link>,
-    },
-
-    {
-      key: "/complaints",
-      icon: <FileTextOutlined />,
-      label: <Link to="/complaints">Complaints</Link>,
-    },
-    {
-      key: "/complaints/new",
-      icon: <FolderOpenOutlined />,
-      label: <Link to="/complaints/new">New Complaint</Link>,
-    },
-
-    {
-      key: "/investigation/intensive-pursuit",
-      icon: <AimOutlined />,
-      label: (
-        <Link to="/investigation/intensive-pursuit">Intensive Pursuit</Link>
-      ),
-    },
-
-    {
-      key: "/notifications",
-      icon: <BellOutlined />,
-      label: <Link to="/notifications">Notifications</Link>,
-    },
-  ];
-
-  const isPoliceStaff = hasAnyRole(user, [
-    "Police Officer",
-    "Patrol Officer",
-    "Detective",
-    "Sergeant",
-    "Captain",
-    "Police Chief",
-    "Cadet",
-  ]);
-
-  if (isPoliceStaff) {
-    items.push(
-      {
-        key: "/cases",
-        icon: <FolderOpenOutlined />,
-        label: <Link to="/cases">Cases</Link>,
-      },
-      {
-        key: "/evidence",
-        icon: <ExperimentOutlined />,
-        label: <Link to="/evidence">Evidence</Link>,
-      },
-    );
-  }
-
-  if (hasRole(user, "Coroner")) {
-    items.push({
-      key: "/evidence-review",
-      icon: <SafetyOutlined />,
-      label: <Link to="/evidence-review">Evidence Review</Link>,
-    });
-  }
-
-  if (hasRole(user, "Detective")) {
-    items.push({
-      key: "/detective-board",
-      icon: <SafetyOutlined />,
-      label: <Link to="/detective-board">Detective Board</Link>,
-    });
-  }
-
-  if (hasAnyRole(user, ["Judge", "Captain", "Police Chief"])) {
-    items.push({
-      key: "/reports",
-      icon: <FileTextOutlined />,
-      label: <Link to="/reports">Reports</Link>,
-    });
-  }
-
-  items.push(
-    {
-      key: "/rewards",
-      icon: <TrophyOutlined />,
-      label: <Link to="/rewards">Rewards</Link>,
-    },
-    {
-      key: "/statistics",
-      icon: <BarChartOutlined />,
-      label: <Link to="/statistics">Statistics</Link>,
-    },
-  );
-
-  if (isAdmin) {
-    items.push({
-      key: "/admin",
-      icon: <SettingOutlined />,
-      label: <Link to="/admin">Admin</Link>,
-    });
-  }
-
-  return items;
 }
 
 function titleForPath(path) {
@@ -188,16 +61,6 @@ export function AppLayout() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const menuItems = useMemo(() => buildMenuItems(user), [user]);
-
-  const selectedKey = useMemo(() => {
-    const path = location.pathname;
-    if (path.startsWith("/complaints/") && path !== "/complaints/new")
-      return "/complaints";
-    if (path.startsWith("/admin")) return "/admin";
-    return path;
-  }, [location.pathname]);
-
   const pageTitle = useMemo(
     () => titleForPath(location.pathname),
     [location.pathname],
@@ -237,26 +100,11 @@ export function AppLayout() {
 
   return (
     <Layout className="h-screen overflow-hidden flex">
-      <Sider
-        theme="light"
-        collapsible
+      <AppSider
+        variant="app"
         collapsed={collapsed}
         onCollapse={setCollapsed}
-        width={260}
-      >
-        <div className="px-4 py-4">
-          <Link to="/dashboard" className="no-underline">
-            <Text strong className="block">
-              L.A. Noire System
-            </Text>
-            <Text type="secondary" className="block">
-              Police Department
-            </Text>
-          </Link>
-        </div>
-
-        <Menu theme="light" mode="inline" selectedKeys={[selectedKey]} items={menuItems} />
-      </Sider>
+      />
 
       <Layout className="flex-1 flex flex-col min-h-0">
         <Navbar
