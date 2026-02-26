@@ -13,12 +13,13 @@ import {
   message,
 } from "antd";
 
+import { getApiBase } from "../config";
 import { listIntensivePursuit } from "../api/calls";
 
 const { Title, Text } = Typography;
 
 function toBackendOrigin() {
-  const apiBase = import.meta.env.VITE_API_URL || import.meta.env.API_BASE_URL || "";
+  const apiBase = getApiBase();
   if (!apiBase) return "";
   return apiBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
 }
