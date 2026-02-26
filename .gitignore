@@ -43,3 +43,4 @@ frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/.vite/
 frontend/.cache/
+node_modules/
