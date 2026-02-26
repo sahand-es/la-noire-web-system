@@ -51,6 +51,8 @@ class CaseViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'create':
             return [IsPoliceRankExceptCadet()]
+        if self.action == 'detectives':
+            return [IsSergeantOrCaptainOrChief()]
         if self.action == 'all_names':
             return [IsAuthenticated()]
         if self.action == 'list':
@@ -207,6 +209,26 @@ class CaseViewSet(viewsets.ModelViewSet):
             'data': CaseDetailSerializer(case).data,
             'message': f'Detective {detective.get_full_name()} assigned to case'
         })
+
+    @action(detail=False, methods=['get'], url_path='detectives')
+    def detectives(self, request):
+        detectives = UserProfile.objects.filter(
+            roles__name='Detective',
+            roles__is_active=True,
+            is_active=True,
+        ).distinct().order_by('first_name', 'last_name', 'username')
+
+        data = [
+            {
+                'id': item.id,
+                'full_name': item.get_full_name(),
+                'username': item.username,
+                'national_id': item.national_id,
+            }
+            for item in detectives
+        ]
+
+        return Response({'status': 'success', 'data': data})
 
     @action(detail=True, methods=['post'], url_path='team-members')
     def add_team_member(self, request, pk=None):

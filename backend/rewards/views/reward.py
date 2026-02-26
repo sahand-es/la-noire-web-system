@@ -55,13 +55,29 @@ class RewardViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = self.queryset.filter(is_civilian_reward=True)
-        if user.has_any_role(['Police Officer', 'Sergeant', 'Captain', 'Police Chief']):
+
+        requested_status = self.request.query_params.get('status')
+
+        if requested_status == RewardStatus.PENDING_DETECTIVE and user.has_role('Detective'):
+            return qs.filter(
+                status=RewardStatus.PENDING_DETECTIVE,
+                case__assigned_detective=user
+            )
+
+        if requested_status == RewardStatus.PENDING and user.has_any_role(
+            ['Police Officer', 'Sergeant', 'Captain', 'Police Chief']
+        ):
             return qs.filter(status=RewardStatus.PENDING)
+
         if user.has_role('Detective'):
             return qs.filter(
                 status=RewardStatus.PENDING_DETECTIVE,
                 case__assigned_detective=user
             )
+
+        if user.has_any_role(['Police Officer', 'Sergeant', 'Captain', 'Police Chief']):
+            return qs.filter(status=RewardStatus.PENDING)
+
         return qs.filter(recipient=user)
 
     def create(self, request, *args, **kwargs):

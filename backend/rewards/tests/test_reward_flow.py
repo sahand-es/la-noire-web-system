@@ -269,3 +269,27 @@ class RewardFlowTestCase(TestCase):
             format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_detective_queue_visible_for_detective_with_officer_role(self):
+        """Detective queue should still work even when user also has an officer role."""
+        self.detective.roles.add(self.role_officer)
+
+        reward = Reward.objects.create(
+            recipient=self.civilian,
+            case=self.case,
+            information_submitted='Tip for detective queue',
+            status=RewardStatus.PENDING_DETECTIVE,
+            is_civilian_reward=True,
+            amount=0,
+        )
+
+        self.client.force_authenticate(user=self.detective)
+        resp = self.client.get(
+            self.rewards_url,
+            {'status': RewardStatus.PENDING_DETECTIVE},
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.data.get('data', [])
+        ids = [item['id'] for item in data]
+        self.assertIn(reward.id, ids)

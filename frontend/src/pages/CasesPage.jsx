@@ -15,7 +15,12 @@ import {
   message,
 } from "antd";
 import dayjs from "dayjs";
-import { createCase, listCases } from "../api/cases";
+import {
+  assignCaseDetective,
+  createCase,
+  listCaseDetectives,
+  listCases,
+} from "../api/cases";
 
 const { Title, Text } = Typography;
 
@@ -48,6 +53,10 @@ export function CasesPage() {
   const [selected, setSelected] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [detectiveOptions, setDetectiveOptions] = useState([]);
+  const [isDetectivesLoading, setIsDetectivesLoading] = useState(false);
+  const [assignDetectiveId, setAssignDetectiveId] = useState(null);
+  const [isAssigningDetective, setIsAssigningDetective] = useState(false);
   const [createForm] = Form.useForm();
 
   const roleNames = useMemo(
@@ -67,6 +76,35 @@ export function CasesPage() {
     ];
     return roleNames.some((name) => allowed.includes(name));
   }, [roleNames]);
+
+  const canAssignDetective = useMemo(() => {
+    const allowed = [
+      "Sergeant",
+      "Captain",
+      "Police Chief",
+      "System Administrator",
+    ];
+    return roleNames.some((name) => allowed.includes(name));
+  }, [roleNames]);
+
+  async function loadDetectives() {
+    if (!canAssignDetective) return;
+    setIsDetectivesLoading(true);
+    try {
+      const data = await listCaseDetectives();
+      const list = Array.isArray(data) ? data : data?.results || [];
+      const options = list.map((item) => ({
+        label: `${item.full_name || item.username || item.id} — ${item.national_id || "-"}`,
+        value: item.id,
+      }));
+      setDetectiveOptions(options);
+    } catch (err) {
+      message.error(err.message || "Failed to load detectives.");
+      setDetectiveOptions([]);
+    } finally {
+      setIsDetectivesLoading(false);
+    }
+  }
 
   async function fetchData(
     nextPage = page,
@@ -105,6 +143,35 @@ export function CasesPage() {
     fetchData(1, pageSize, status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isModalOpen || !selected || !canAssignDetective) return;
+    loadDetectives();
+    setAssignDetectiveId(selected.assigned_detective || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen, selected, canAssignDetective]);
+
+  async function handleAssignDetective() {
+    if (!selected?.id) return;
+    if (!assignDetectiveId) {
+      message.error("Please select a detective.");
+      return;
+    }
+    setIsAssigningDetective(true);
+    try {
+      const updatedCase = await assignCaseDetective(
+        selected.id,
+        assignDetectiveId,
+      );
+      message.success("Detective assigned successfully.");
+      setSelected(updatedCase || selected);
+      await fetchData(page, pageSize, status);
+    } catch (err) {
+      message.error(err.message || "Failed to assign detective.");
+    } finally {
+      setIsAssigningDetective(false);
+    }
+  }
 
   async function handleCreate(values) {
     const witnessNationalIds = (values.witness_national_ids || "")
@@ -379,34 +446,65 @@ export function CasesPage() {
             ]}
           >
             {selected ? (
-              <Descriptions column={1} bordered size="small">
-                <Descriptions.Item label="Case Number">
-                  {selected.case_number || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Title">
-                  {selected.title || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Status">
-                  {selected.status || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Priority">
-                  {selected.priority || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Incident Date">
-                  {formatDate(selected.incident_date)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Incident Location">
-                  {selected.incident_location || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Assigned Detective">
-                  {selected.assigned_detective_name ||
-                    selected.assigned_detective ||
-                    "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Created">
-                  {formatDate(selected.created_at)}
-                </Descriptions.Item>
-              </Descriptions>
+              <div className="flex flex-col gap-4">
+                <Descriptions column={1} bordered size="small">
+                  <Descriptions.Item label="Case Number">
+                    {selected.case_number || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Title">
+                    {selected.title || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Status">
+                    {selected.status || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Priority">
+                    {selected.priority || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Incident Date">
+                    {formatDate(selected.incident_date)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Incident Location">
+                    {selected.incident_location || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Assigned Detective">
+                    {selected.assigned_detective_name ||
+                      selected.assigned_detective ||
+                      "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Created">
+                    {formatDate(selected.created_at)}
+                  </Descriptions.Item>
+                </Descriptions>
+
+                {canAssignDetective ? (
+                  <div className="flex flex-col gap-2">
+                    <Text strong>Assign Detective</Text>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Select
+                        value={assignDetectiveId}
+                        onChange={setAssignDetectiveId}
+                        options={detectiveOptions}
+                        loading={isDetectivesLoading}
+                        placeholder="Select detective"
+                        className="min-w-72"
+                        showSearch
+                        filterOption={(input, option) =>
+                          String(option?.label || "")
+                            .toLowerCase()
+                            .includes(input.toLowerCase())
+                        }
+                      />
+                      <Button
+                        type="primary"
+                        onClick={handleAssignDetective}
+                        loading={isAssigningDetective}
+                      >
+                        Assign
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </Modal>
         </div>
