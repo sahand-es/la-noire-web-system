@@ -37,6 +37,7 @@ class SuspectCaseLinkSerializer(serializers.ModelSerializer):
     has_both_assessments = serializers.BooleanField(read_only=True)
     captain_name = serializers.CharField(source='captain.get_full_name', read_only=True, allow_null=True)
     chief_name = serializers.CharField(source='chief.get_full_name', read_only=True, allow_null=True)
+    is_critical_case = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = SuspectCaseLink
@@ -47,6 +48,7 @@ class SuspectCaseLinkSerializer(serializers.ModelSerializer):
             'average_guilt_score', 'has_both_assessments',
             'captain_opinion', 'captain', 'captain_name', 'captain_opinion_at',
             'chief_approved', 'chief', 'chief_name', 'chief_approval_at',
+            'is_critical_case',
             'role_in_crime', 'identification_method', 'notes',
             'created_at', 'updated_at',
         ]

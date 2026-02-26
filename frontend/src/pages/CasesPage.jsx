@@ -6,6 +6,7 @@ import {
   Descriptions,
   Form,
   Input,
+  InputNumber,
   Modal,
   Select,
   Space,
@@ -26,6 +27,10 @@ import {
   listSuspectLinks,
   markSuspectWanted,
   markSuspectCaptured,
+  detectiveAssessment,
+  sergeantAssessment,
+  captainOpinion,
+  chiefApproval,
 } from "../api/calls";
 
 const { Title, Text } = Typography;
@@ -107,6 +112,16 @@ export function CasesPage() {
   const [suspectLinks, setSuspectLinks] = useState([]);
   const [suspectLinksLoading, setSuspectLinksLoading] = useState(false);
   const [suspectActionLinkId, setSuspectActionLinkId] = useState(null);
+
+  const isDetective = roleNames.includes("Detective");
+  const isSergeant = roleNames.includes("Sergeant");
+  const isCaptain = roleNames.includes("Captain");
+  const isPoliceChief = roleNames.includes("Police Chief");
+
+  const [guiltScoreModal, setGuiltScoreModal] = useState({ open: false, link: null, type: null }); // type: 'detective' | 'sergeant'
+  const [captainOpinionModal, setCaptainOpinionModal] = useState({ open: false, link: null });
+  const [guiltScoreForm] = Form.useForm();
+  const [captainOpinionForm] = Form.useForm();
 
   async function loadDetectives() {
     if (!canAssignDetective) return;
@@ -216,6 +231,61 @@ export function CasesPage() {
       fetchSuspectLinks();
     } catch (err) {
       message.error(err.message || "Failed to mark suspect as captured.");
+    } finally {
+      setSuspectActionLinkId(null);
+    }
+  }
+
+  async function handleGuiltScoreSubmit() {
+    const values = await guiltScoreForm.validateFields();
+    const { link, type } = guiltScoreModal;
+    if (!selected?.id || !link || !type) return;
+    setSuspectActionLinkId(link.id);
+    try {
+      if (type === "detective") {
+        await detectiveAssessment(selected.id, link.id, { guilt_score: values.guilt_score });
+        message.success("Detective guilt score recorded.");
+      } else {
+        await sergeantAssessment(selected.id, link.id, { guilt_score: values.guilt_score });
+        message.success("Sergeant guilt score recorded.");
+      }
+      setGuiltScoreModal({ open: false, link: null, type: null });
+      guiltScoreForm.resetFields();
+      fetchSuspectLinks();
+    } catch (err) {
+      message.error(err.message || "Failed to save guilt score.");
+    } finally {
+      setSuspectActionLinkId(null);
+    }
+  }
+
+  async function handleCaptainOpinionSubmit() {
+    const values = await captainOpinionForm.validateFields();
+    const { link } = captainOpinionModal;
+    if (!selected?.id || !link) return;
+    setSuspectActionLinkId(link.id);
+    try {
+      await captainOpinion(selected.id, link.id, { opinion: values.opinion });
+      message.success("Captain opinion recorded.");
+      setCaptainOpinionModal({ open: false, link: null });
+      captainOpinionForm.resetFields();
+      fetchSuspectLinks();
+    } catch (err) {
+      message.error(err.message || "Failed to save captain opinion.");
+    } finally {
+      setSuspectActionLinkId(null);
+    }
+  }
+
+  async function handleChiefApproval(link, approved) {
+    if (!selected?.id) return;
+    setSuspectActionLinkId(link.id);
+    try {
+      await chiefApproval(selected.id, link.id, { approved });
+      message.success(approved ? "Captain opinion approved." : "Captain opinion rejected.");
+      fetchSuspectLinks();
+    } catch (err) {
+      message.error(err.message || "Failed to record chief decision.");
     } finally {
       setSuspectActionLinkId(null);
     }
@@ -585,45 +655,146 @@ export function CasesPage() {
                     <div className="flex flex-col gap-2">
                       {suspectLinks.map((link) => (
                         <Card key={link.id} size="small">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                              <Text strong>
-                                {link.suspect_name || `${link.suspect_national_id || "—"}`}
-                              </Text>
-                              <div className="mt-0.5">
-                                <Text type="secondary" className="text-xs">
-                                  National ID: {link.suspect_national_id || "-"}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <Text strong>
+                                  {link.suspect_name || `${link.suspect_national_id || "—"}`}
                                 </Text>
-                                {" · "}
-                                <Tag color={link.suspect_is_wanted ? "red" : "green"}>
-                                  {link.suspect_status || "-"}
-                                </Tag>
+                                <div className="mt-0.5">
+                                  <Text type="secondary" className="text-xs">
+                                    National ID: {link.suspect_national_id || "-"}
+                                  </Text>
+                                  {" · "}
+                                  <Tag color={link.suspect_is_wanted ? "red" : "green"}>
+                                    {link.suspect_status || "-"}
+                                  </Tag>
+                                </div>
                               </div>
+                              {canManageSuspectState ? (
+                                <Space>
+                                  {!link.suspect_is_wanted ? (
+                                    <Button
+                                      size="small"
+                                      danger
+                                      onClick={() => handleMarkWanted(link)}
+                                      loading={suspectActionLinkId === link.id}
+                                    >
+                                      Mark as Wanted
+                                    </Button>
+                                  ) : null}
+                                  {link.suspect_is_wanted ? (
+                                    <Button
+                                      size="small"
+                                      type="primary"
+                                      onClick={() => handleMarkCaptured(link)}
+                                      loading={suspectActionLinkId === link.id}
+                                    >
+                                      Mark as Captured
+                                    </Button>
+                                  ) : null}
+                                </Space>
+                              ) : null}
                             </div>
-                            {canManageSuspectState ? (
-                              <Space>
-                                {!link.suspect_is_wanted ? (
+
+                            {/* Guilt scores & approval workflow (after arrest) */}
+                            <div className="border-t pt-2 mt-1">
+                              <div className="flex flex-wrap items-center gap-3 text-sm">
+                                <span>
+                                  <Text type="secondary">Detective score:</Text>{" "}
+                                  {link.detective_guilt_score != null ? (
+                                    link.detective_guilt_score
+                                  ) : isDetective ? (
+                                    <Button
+                                      type="link"
+                                      size="small"
+                                      className="p-0 h-auto"
+                                      onClick={() => {
+                                        setGuiltScoreModal({ open: true, link, type: "detective" });
+                                        guiltScoreForm.setFieldsValue({ guilt_score: 5 });
+                                      }}
+                                    >
+                                      Set (1–10)
+                                    </Button>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </span>
+                                <span>
+                                  <Text type="secondary">Sergeant score:</Text>{" "}
+                                  {link.sergeant_guilt_score != null ? (
+                                    link.sergeant_guilt_score
+                                  ) : isSergeant ? (
+                                    <Button
+                                      type="link"
+                                      size="small"
+                                      className="p-0 h-auto"
+                                      onClick={() => {
+                                        setGuiltScoreModal({ open: true, link, type: "sergeant" });
+                                        guiltScoreForm.setFieldsValue({ guilt_score: 5 });
+                                      }}
+                                    >
+                                      Set (1–10)
+                                    </Button>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </span>
+                                {link.average_guilt_score != null ? (
+                                  <span>
+                                    <Text type="secondary">Average:</Text> {link.average_guilt_score.toFixed(1)}
+                                  </span>
+                                ) : null}
+                              </div>
+                              {link.has_both_assessments ? (
+                                <div className="mt-2">
+                                  <Text type="secondary" className="text-xs">Captain opinion: </Text>
+                                  {link.captain_opinion ? (
+                                    <div className="mt-0.5 text-sm">{link.captain_opinion}</div>
+                                  ) : isCaptain ? (
+                                    <Button
+                                      type="link"
+                                      size="small"
+                                      className="p-0 h-auto"
+                                      onClick={() => {
+                                        setCaptainOpinionModal({ open: true, link });
+                                        captainOpinionForm.resetFields();
+                                      }}
+                                    >
+                                      Set opinion (statements, documents, scores)
+                                    </Button>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </div>
+                              ) : null}
+                              {link.is_critical_case && link.captain_opinion && link.chief_approved == null && isPoliceChief ? (
+                                <div className="mt-2 flex gap-2">
                                   <Button
                                     size="small"
                                     danger
-                                    onClick={() => handleMarkWanted(link)}
+                                    onClick={() => handleChiefApproval(link, false)}
                                     loading={suspectActionLinkId === link.id}
                                   >
-                                    Mark as Wanted
+                                    Reject
                                   </Button>
-                                ) : null}
-                                {link.suspect_is_wanted ? (
                                   <Button
                                     size="small"
                                     type="primary"
-                                    onClick={() => handleMarkCaptured(link)}
+                                    onClick={() => handleChiefApproval(link, true)}
                                     loading={suspectActionLinkId === link.id}
                                   >
-                                    Mark as Captured
+                                    Approve
                                   </Button>
-                                ) : null}
-                              </Space>
-                            ) : null}
+                                </div>
+                              ) : link.is_critical_case && link.chief_approved != null ? (
+                                <div className="mt-1 text-xs">
+                                  <Tag color={link.chief_approved ? "green" : "red"}>
+                                    Chief: {link.chief_approved ? "Approved" : "Rejected"}
+                                  </Tag>
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                         </Card>
                       ))}
@@ -632,6 +803,52 @@ export function CasesPage() {
                 </div>
               </div>
             ) : null}
+          </Modal>
+
+          <Modal
+            title={guiltScoreModal.type === "detective" ? "Detective Guilt Score" : "Sergeant Guilt Score"}
+            open={guiltScoreModal.open}
+            onCancel={() => {
+              setGuiltScoreModal({ open: false, link: null, type: null });
+              guiltScoreForm.resetFields();
+            }}
+            onOk={handleGuiltScoreSubmit}
+            okText="Save"
+          >
+            <Form form={guiltScoreForm} layout="vertical">
+              <Form.Item
+                name="guilt_score"
+                label="Probability of guilt (1–10)"
+                rules={[
+                  { required: true, message: "Required" },
+                  { type: "number", min: 1, max: 10, message: "Must be 1–10" },
+                ]}
+              >
+                <InputNumber min={1} max={10} className="w-full" />
+              </Form.Item>
+            </Form>
+          </Modal>
+
+          <Modal
+            title="Captain Opinion"
+            open={captainOpinionModal.open}
+            onCancel={() => {
+              setCaptainOpinionModal({ open: false, link: null });
+              captainOpinionForm.resetFields();
+            }}
+            onOk={handleCaptainOpinionSubmit}
+            okText="Save"
+            width={500}
+          >
+            <Form form={captainOpinionForm} layout="vertical">
+              <Form.Item
+                name="opinion"
+                label="Final opinion (statements, documents, scores)"
+                rules={[{ required: true, message: "Opinion is required" }]}
+              >
+                <Input.TextArea rows={5} placeholder="Final opinion with statements, documents, and scores" />
+              </Form.Item>
+            </Form>
           </Modal>
         </div>
       </div>
