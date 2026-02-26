@@ -2,6 +2,7 @@ from .case_resolution import (
     EvidenceLink,
     DetectiveReport,
     DetectiveReportStatus,
+    ReportedSuspect,
     Notification,
 )
 from .bail_fine import BailFine
@@ -12,6 +13,7 @@ __all__ = [
     'EvidenceLink',
     'DetectiveReport',
     'DetectiveReportStatus',
+    'ReportedSuspect',
     'Notification',
     'BailFine',
     'Suspect',

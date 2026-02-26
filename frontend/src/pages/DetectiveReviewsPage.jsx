@@ -1,13 +1,3 @@
-export function DetectiveReviewsPage() {
-  return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-6xl mx-auto">
-        Detective Reviews
-      </div>
-    </div>
-  );
-}
-
 import { useEffect, useMemo, useState } from "react";
 import {
   Button,
@@ -15,6 +5,7 @@ import {
   Descriptions,
   Input,
   Modal,
+  Select,
   Space,
   Spin,
   Table,
@@ -23,15 +14,13 @@ import {
   message,
 } from "antd";
 import { PageHeader } from "../components/PageHeader";
-import { listPendingBiologicalEvidence, coronerApproveEvidence } from "../api/evidenceReview";
+import { listCases } from "../api/cases";
+import {
+  listDetectiveReports,
+  sergeantReviewDetectiveReport,
+} from "../api/detectiveBoard";
 
 const { Text } = Typography;
-
-function normalizeResponse(data) {
-  if (Array.isArray(data)) return { rows: data, total: data.length };
-  if (data && Array.isArray(data.results)) return { rows: data.results, total: data.count ?? data.results.length };
-  return { rows: [], total: 0 };
-}
 
 function formatDate(value) {
   if (!value) return "-";
@@ -40,87 +29,137 @@ function formatDate(value) {
   return d.toLocaleString();
 }
 
-export function EvidenceReviewPage() {
+export function DetectiveReviewsPage() {
+  const [caseOptions, setCaseOptions] = useState([]);
+  const [caseId, setCaseId] = useState(null);
+  const [casesLoading, setCasesLoading] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [rows, setRows] = useState([]);
-  const [total, setTotal] = useState(0);
-
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
 
   const [selected, setSelected] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [decision, setDecision] = useState("approve");
-  const [resultMessage, setResultMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  async function fetchData(nextPage = page, nextPageSize = pageSize) {
+  async function fetchCases() {
+    setCasesLoading(true);
+    try {
+      const data = await listCases({ page: 1, pageSize: 100 });
+      const list = Array.isArray(data) ? data : data.results || [];
+      const options = list.map((c) => ({
+        value: c.id,
+        label: `${c.case_number || c.id} — ${c.title || "Untitled"}`,
+      }));
+      setCaseOptions(options);
+      if (!caseId && options.length > 0) {
+        setCaseId(options[0].value);
+      }
+    } catch (err) {
+      message.error(err.message || "Failed to load cases.");
+      setCaseOptions([]);
+    } finally {
+      setCasesLoading(false);
+    }
+  }
+
+  async function fetchReports() {
+    if (!caseId) {
+      setRows([]);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const data = await listPendingBiologicalEvidence({ page: nextPage, pageSize: nextPageSize });
-      const normalized = normalizeResponse(data);
-      setRows(normalized.rows);
-      setTotal(normalized.total);
+      const data = await listDetectiveReports(caseId);
+      const list = Array.isArray(data) ? data : data.results || [];
+      setRows(list);
     } catch (err) {
-      message.error(err.message || "Failed to load biological evidence approvals.");
+      message.error(err.message || "Failed to load detective reports.");
       setRows([]);
-      setTotal(0);
     } finally {
       setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    fetchData(1, pageSize);
+    fetchCases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function submitDecision() {
+  useEffect(() => {
+    fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
+
+  async function submitReview() {
     if (!selected) return;
-
-    setIsSubmitting(true);
+    setSubmitting(true);
     try {
-      await coronerApproveEvidence(selected.id, {
-        action: decision, // "approve" | "reject"
-        follow_up_result: resultMessage.trim(),
+      await sergeantReviewDetectiveReport(selected.case, selected.id, {
+        action: decision === "approve" ? "approve" : "disagree",
+        message: note || "",
       });
-
-      message.success("Decision submitted.");
+      message.success("Review submitted.");
       setIsModalOpen(false);
       setSelected(null);
+      setNote("");
       setDecision("approve");
-      setResultMessage("");
-      fetchData(page, pageSize);
+      fetchReports();
     } catch (err) {
-      message.error(err.message || "Failed to submit decision.");
+      message.error(err.message || "Failed to submit review.");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   }
 
   const columns = useMemo(() => {
     return [
-      { title: "Case", dataIndex: "case_number", key: "case_number", width: 160, render: (v) => v || "-" },
-      { title: "Title", dataIndex: "title", key: "title", render: (v) => v || "-" },
-      { title: "Status", dataIndex: "status", key: "status", width: 140, render: (v) => <Tag>{v || "-"}</Tag> },
-      { title: "Recorded", dataIndex: "created_at", key: "created_at", width: 190, render: (v) => formatDate(v) },
+      {
+        title: "Case",
+        dataIndex: "case_number",
+        key: "case_number",
+        width: 160,
+      },
+      {
+        title: "Submitted By",
+        dataIndex: "detective_name",
+        key: "detective_name",
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        width: 180,
+        render: (v) => <Tag>{v}</Tag>,
+      },
+      {
+        title: "Submitted",
+        dataIndex: "submitted_at",
+        key: "submitted_at",
+        width: 180,
+        render: (v) => formatDate(v),
+      },
       {
         title: "",
         key: "actions",
-        width: 140,
+        width: 180,
         render: (_, r) => (
-          <Button
-            type="primary"
-            onClick={() => {
-              setSelected(r);
-              setIsModalOpen(true);
-              setDecision("approve");
-              setResultMessage("");
-            }}
-          >
-            Review
-          </Button>
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => {
+                setSelected(r);
+                setIsModalOpen(true);
+                setDecision("approve");
+                setNote("");
+              }}
+            >
+              Review
+            </Button>
+          </Space>
         ),
       },
     ];
@@ -131,16 +170,27 @@ export function EvidenceReviewPage() {
       <div className="max-w-6xl mx-auto flex flex-col gap-4">
         <Card>
           <PageHeader
-            title="Evidence Review"
-            subtitle="Coroner: approve or reject biological and medical evidence."
+            title="Detective Reports"
+            subtitle="Sergeant: review detective reports and approve or record disagreement."
             actions={
               <Space>
-                <Button onClick={() => fetchData(page, pageSize)} disabled={isLoading}>
+                <Button onClick={fetchReports} disabled={!caseId}>
                   Refresh
                 </Button>
               </Space>
             }
           />
+          <div className="mt-4">
+            <Select
+              value={caseId}
+              onChange={setCaseId}
+              options={caseOptions}
+              placeholder="Select a case"
+              loading={casesLoading}
+              allowClear
+              className="min-w-96"
+            />
+          </div>
         </Card>
 
         <Card>
@@ -153,40 +203,40 @@ export function EvidenceReviewPage() {
               rowKey={(r) => r.id}
               columns={columns}
               dataSource={rows}
-              pagination={{
-                current: page,
-                pageSize,
-                total,
-                showSizeChanger: true,
-                onChange: (nextPage, nextPageSize) => {
-                  setPage(nextPage);
-                  setPageSize(nextPageSize);
-                  fetchData(nextPage, nextPageSize);
-                },
-              }}
+              pagination={false}
             />
           )}
         </Card>
 
         <Modal
-          title="Review Biological Evidence"
+          title={
+            selected
+              ? `Report ${selected.case_number || selected.case}`
+              : "Review Report"
+          }
           open={isModalOpen}
           onCancel={() => setIsModalOpen(false)}
-          onOk={submitDecision}
-          okText="Submit"
-          confirmLoading={isSubmitting}
+          onOk={submitReview}
+          confirmLoading={submitting}
         >
           {selected ? (
             <div className="flex flex-col gap-3">
               <Descriptions column={1} bordered size="small">
-                <Descriptions.Item label="Case">{selected.case_number || selected.case || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Title">{selected.title || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Description">{selected.description || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Status">{selected.status || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Recorded">{formatDate(selected.created_at)}</Descriptions.Item>
+                <Descriptions.Item label="Case">
+                  {selected.case_number || selected.case}
+                </Descriptions.Item>
+                <Descriptions.Item label="Detective">
+                  {selected.detective_name || selected.detective}
+                </Descriptions.Item>
+                <Descriptions.Item label="Status">
+                  {selected.status}
+                </Descriptions.Item>
+                <Descriptions.Item label="Submitted">
+                  {formatDate(selected.submitted_at)}
+                </Descriptions.Item>
               </Descriptions>
 
-              <div className="flex items-center gap-2 flex-wrap mt-2">
+              <div className="flex items-center gap-2 mt-2">
                 <Text strong>Decision:</Text>
                 <Button
                   type={decision === "approve" ? "primary" : "default"}
@@ -195,18 +245,18 @@ export function EvidenceReviewPage() {
                   Approve
                 </Button>
                 <Button
-                  type={decision === "reject" ? "primary" : "default"}
-                  onClick={() => setDecision("reject")}
+                  type={decision === "disagree" ? "primary" : "default"}
+                  onClick={() => setDecision("disagree")}
                 >
-                  Reject
+                  Disagree
                 </Button>
               </div>
 
               <Input.TextArea
-                value={resultMessage}
-                onChange={(e) => setResultMessage(e.target.value)}
-                placeholder="Follow-up result / notes (optional)"
                 rows={4}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Message (optional)"
               />
             </div>
           ) : null}

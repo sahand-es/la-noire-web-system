@@ -14,7 +14,14 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from cases.models import Case, CaseStatus, WitnessTestimony, OtherEvidence
-from investigation.models import EvidenceLink, DetectiveReport, DetectiveReportStatus, Notification
+from investigation.models import (
+    EvidenceLink,
+    DetectiveReport,
+    DetectiveReportStatus,
+    Notification,
+    ReportedSuspect,
+    SuspectCaseLink,
+)
 from accounts.models import Role
 
 User = get_user_model()
@@ -197,6 +204,43 @@ class CaseResolutionFlowTestCase(TestCase):
         self.assertEqual(report.status, DetectiveReportStatus.APPROVED)
         self.assertEqual(report.sergeant_id, self.sergeant.id)
         self.assertIsNotNone(report.reviewed_at)
+
+    def test_approved_report_adds_reported_suspects_to_case(self):
+        """When sergeant approves, reported suspects are added to case suspects."""
+        evidence = OtherEvidence.objects.create(
+            case=self.case,
+            title='Possible suspect trace',
+            description='Found during investigation',
+            location='Scene',
+            item_name='Hat',
+            item_category='Clothing',
+            physical_description='Black hat',
+            condition='Used',
+            evidence_type='OTHER',
+            status='COLLECTED',
+            collected_date=timezone.now(),
+            collected_by=self.officer,
+        )
+        report = DetectiveReport.objects.create(
+            case=self.case,
+            detective=self.detective,
+            status=DetectiveReportStatus.PENDING_SERGEANT,
+        )
+        ct = ContentType.objects.get_for_model(OtherEvidence)
+        ReportedSuspect.objects.create(
+            report=report,
+            content_type=ct,
+            object_id=evidence.id,
+        )
+
+        self.client.force_authenticate(user=self.sergeant)
+        resp = self.client.post(
+            self._investigation_url(f'detective-reports/{report.id}/sergeant-reviews/'),
+            {'action': 'approve', 'message': 'Proceed with arrest.'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(SuspectCaseLink.objects.filter(case=self.case).count(), 1)
 
     def test_sergeant_disagrees_case_remains_open(self):
         """Sergeant disagrees -> disagreement message, case remains open."""

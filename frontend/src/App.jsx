@@ -140,7 +140,14 @@ function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/trials" element={<TrialsPage />} />
           <Route path="/approvals" element={<ApprovalsPage />} />
-          <Route path="/detective-reviews" element={<DetectiveReviewsPage />} />
+          <Route
+            path="/detective-reviews"
+            element={
+              <RoleRoute roles={["Sergeant"]}>
+                <DetectiveReviewsPage />
+              </RoleRoute>
+            }
+          />
           <Route path="/statistics" element={<StatisticsPage />} />
 
           {/* Admin nested routes */}

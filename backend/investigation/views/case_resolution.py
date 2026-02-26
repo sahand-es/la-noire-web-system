@@ -1,4 +1,5 @@
 from django.utils import timezone
+import hashlib
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -12,12 +13,16 @@ from investigation.models import (
     DetectiveReport,
     DetectiveReportStatus,
     Notification,
+    ReportedSuspect,
+    Suspect,
+    SuspectCaseLink,
 )
 from investigation.serializers.case_resolution import (
     EvidenceLinkCreateSerializer,
     EvidenceLinkSerializer,
     DetectiveReportSerializer,
     SergeantReviewSerializer,
+    DetectiveReportCreateSerializer,
     NotificationSerializer,
 )
 from accounts.permissions import IsDetective, IsSergeant, IsDetectiveOrSergeantOrChief
@@ -45,6 +50,102 @@ def _evidence_object_belongs_to_case(content_type_id, object_id, case):
     except (model_class.DoesNotExist, ValueError):
         return False
     return getattr(obj, 'case_id', None) == case.pk
+
+
+def _digits_only(value):
+    if value is None:
+        return ''
+    return ''.join(ch for ch in str(value) if ch.isdigit())
+
+
+def _normalize_national_id(raw_value):
+    digits = _digits_only(raw_value)
+    if len(digits) == 10:
+        return digits
+    return None
+
+
+def _split_full_name(full_name):
+    parts = (full_name or '').strip().split()
+    if not parts:
+        return 'Unknown', 'Suspect'
+    if len(parts) == 1:
+        return parts[0], 'Suspect'
+    return parts[0], ' '.join(parts[1:])
+
+
+def _generate_unique_national_id(seed):
+    base = int(hashlib.sha256(seed.encode('utf-8')).hexdigest(), 16) % (10 ** 10)
+    for _ in range(10 ** 4):
+        candidate = f"{base:010d}"
+        if not Suspect.objects.filter(national_id=candidate).exists():
+            return candidate
+        base = (base + 1) % (10 ** 10)
+    return f"{timezone.now().strftime('%H%M%S%f')[:10]}"
+
+
+def _build_suspect_from_evidence(case, report, reported_suspect):
+    model_class = reported_suspect.content_type.model_class()
+    obj = None
+    if model_class:
+        try:
+            obj = model_class.objects.get(pk=reported_suspect.object_id)
+        except model_class.DoesNotExist:
+            obj = None
+
+    first_name = 'Unknown'
+    last_name = 'Suspect'
+    phone_number = ''
+    national_id = None
+
+    if obj is not None and hasattr(obj, 'suspected_owner') and obj.suspected_owner:
+        owner = obj.suspected_owner
+        first_name = owner.first_name or first_name
+        last_name = owner.last_name or last_name
+        phone_number = owner.phone_number or ''
+        national_id = _normalize_national_id(owner.national_id)
+    elif obj is not None and hasattr(obj, 'owner_full_name') and obj.owner_full_name:
+        first_name, last_name = _split_full_name(obj.owner_full_name)
+
+    if obj is not None and hasattr(obj, 'witness_name') and obj.witness_name:
+        first_name, last_name = _split_full_name(obj.witness_name)
+        if hasattr(obj, 'witness_contact') and obj.witness_contact:
+            phone_number = obj.witness_contact
+
+    if obj is not None and hasattr(obj, 'document_attributes'):
+        attrs = obj.document_attributes or {}
+        for key in ['national_id', 'id_number', 'ID_Number', 'nationalCode', 'national_code']:
+            candidate = _normalize_national_id(attrs.get(key))
+            if candidate:
+                national_id = candidate
+                break
+
+    if not national_id:
+        seed = f"{case.id}:{report.id}:{reported_suspect.content_type_id}:{reported_suspect.object_id}"
+        national_id = _generate_unique_national_id(seed)
+
+    suspect_defaults = {
+        'first_name': first_name,
+        'last_name': last_name,
+        'phone_number': phone_number,
+    }
+    suspect, _ = Suspect.objects.get_or_create(
+        national_id=national_id,
+        defaults=suspect_defaults,
+    )
+
+    _, link_created = SuspectCaseLink.objects.get_or_create(
+        suspect=suspect,
+        case=case,
+        defaults={
+            'identification_method': f'Detective report #{report.id}',
+            'notes': (
+                f'Added from reported suspect evidence '
+                f'{reported_suspect.content_type.model} #{reported_suspect.object_id}'
+            ),
+        },
+    )
+    return link_created
 
 
 class EvidenceLinkViewSet(viewsets.ModelViewSet):
@@ -115,6 +216,10 @@ class DetectiveReportViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         case = get_object_or_404(Case, pk=self.kwargs['case_pk'])
+        ser = DetectiveReportCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
         if case.assigned_detective != request.user:
             return Response(
                 {'status': 'error', 'message': 'Only the assigned detective can submit reports.'},
@@ -124,7 +229,37 @@ class DetectiveReportViewSet(viewsets.ModelViewSet):
             case=case,
             detective=request.user,
             status=DetectiveReportStatus.PENDING_SERGEANT,
+            detective_message=data.get('message', '')
         )
+
+        # persist reported suspects (evidence references)
+        suspects = data.get('suspects') or []
+        for s in suspects:
+            ct_id = s.get('content_type_id')
+            obj_id = s.get('object_id')
+            if not _evidence_object_belongs_to_case(ct_id, obj_id, case):
+                # rollback created report and return error
+                report.delete()
+                return Response({'status': 'error', 'message': 'Reported suspect evidence must belong to this case.'}, status=status.HTTP_400_BAD_REQUEST)
+            ReportedSuspect.objects.create(report=report, content_type_id=ct_id, object_id=obj_id)
+
+        # notify sergeants (all users in Sergeant role)
+        try:
+            from accounts.models import Role
+            ser_role = Role.objects.filter(name='Sergeant').first()
+            if ser_role:
+                ser_users = ser_role.accounts_users.filter(is_active=True)
+                for u in ser_users:
+                    Notification.objects.create(
+                        case=case,
+                        recipient=u,
+                        content_type=ContentType.objects.get_for_model(DetectiveReport),
+                        object_id=report.id,
+                        message=f"Detective submitted report for Case {case.case_number or case.id}",
+                    )
+        except Exception:
+            # non-fatal if notification creation fails
+            pass
         return Response(
             {'status': 'success', 'data': DetectiveReportSerializer(report).data},
             status=status.HTTP_201_CREATED
@@ -154,10 +289,26 @@ class DetectiveReportViewSet(viewsets.ModelViewSet):
             DetectiveReportStatus.APPROVED if action_type == 'approve' else DetectiveReportStatus.DISAGREEMENT
         )
         report.save()
+
+        linked_count = 0
+        if action_type == 'approve':
+            reported = report.reported_suspects.select_related('content_type').all()
+            for rs in reported:
+                if _build_suspect_from_evidence(report.case, report, rs):
+                    linked_count += 1
+
+        success_message = (
+            'Approved; arrest may begin.'
+            if action_type == 'approve'
+            else 'Disagreement recorded; case remains open.'
+        )
+        if action_type == 'approve' and linked_count:
+            success_message = f'{success_message} {linked_count} suspect(s) added to case.'
+
         return Response({
             'status': 'success',
             'data': DetectiveReportSerializer(report).data,
-            'message': 'Approved; arrest may begin.' if action_type == 'approve' else 'Disagreement recorded; case remains open.'
+            'message': success_message
         })
 
 

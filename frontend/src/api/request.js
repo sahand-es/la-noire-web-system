@@ -15,6 +15,24 @@ function getToken() {
   return localStorage.getItem("access_token") || "";
 }
 
+function getRefreshToken() {
+  return localStorage.getItem("refresh_token") || "";
+}
+
+function clearAuth() {
+  try {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+  } catch {}
+}
+
+function redirectToLogin() {
+  if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+    window.location.assign("/login");
+  }
+}
+
 function headers(withBody = false) {
   const h = { Accept: "application/json" };
   if (withBody) h["Content-Type"] = "application/json";
@@ -32,14 +50,7 @@ async function handleResponse(res) {
     throw new Error(res.statusText || "Invalid response from server");
   }
 
-  // If unauthorized, clear local tokens so the app can re-authenticate.
   if (res.status === 401) {
-    try {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      // keep user info for debugging, but remove to force refresh if needed
-      localStorage.removeItem("user");
-    } catch {}
     const err = new Error(
       (json && (json.message || json.error)) || "Unauthorized",
     );
@@ -89,44 +100,97 @@ async function handleResponse(res) {
   throw err;
 }
 
+async function refreshAccessToken() {
+  const refresh = getRefreshToken();
+  if (!refresh) {
+    return "";
+  }
+
+  const res = await fetch(url("auth/sessions/refresh/"), {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Refresh token expired");
+  }
+
+  const data = await res.json();
+  const access = data?.access || "";
+  if (!access) {
+    throw new Error("No access token in refresh response");
+  }
+
+  localStorage.setItem("access_token", access);
+  return access;
+}
+
+async function request(path, init = {}, canRetry = true) {
+  const response = await fetch(url(path), init);
+
+  if (response.status !== 401 || !canRetry) {
+    return handleResponse(response);
+  }
+
+  try {
+    const newAccessToken = await refreshAccessToken();
+    if (!newAccessToken) {
+      throw new Error("Missing refreshed access token");
+    }
+
+    const retriedHeaders = {
+      ...(init.headers || {}),
+      Authorization: `Bearer ${newAccessToken}`,
+    };
+
+    const retried = await fetch(url(path), {
+      ...init,
+      headers: retriedHeaders,
+    });
+
+    return handleResponse(retried);
+  } catch {
+    clearAuth();
+    redirectToLogin();
+    throw new Error("Session expired. Please login again.");
+  }
+}
+
 function url(path) {
   return `${BASE}/${path}`.replace(/([^:]\/)\/+/g, "$1");
 }
 
 export function get(path) {
-  return fetch(url(path), { method: "GET", headers: headers() }).then(
-    handleResponse,
-  );
+  return request(path, { method: "GET", headers: headers() });
 }
 
 export function post(path, body) {
-  return fetch(url(path), {
+  return request(path, {
     method: "POST",
     headers: headers(true),
     body: body != null ? JSON.stringify(body) : undefined,
-  }).then(handleResponse);
+  });
 }
 
 export function put(path, body) {
-  return fetch(url(path), {
+  return request(path, {
     method: "PUT",
     headers: headers(true),
     body: body != null ? JSON.stringify(body) : undefined,
-  }).then(handleResponse);
+  });
 }
 
 export function patch(path, body) {
-  return fetch(url(path), {
+  return request(path, {
     method: "PATCH",
     headers: headers(true),
     body: body != null ? JSON.stringify(body) : undefined,
-  }).then(handleResponse);
+  });
 }
 
 export function del(path) {
-  return fetch(url(path), { method: "DELETE", headers: headers() }).then(
-    handleResponse,
-  );
+  return request(path, { method: "DELETE", headers: headers() });
 }
 
 export function getPublic(path) {

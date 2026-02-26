@@ -95,6 +95,11 @@ class DetectiveReport(BaseModel):
         blank=True,
         verbose_name="Reviewed At"
     )
+    detective_message = models.TextField(
+        blank=True,
+        verbose_name="Detective Message",
+        help_text="Detective reasoning or notes submitted with the report",
+    )
 
     class Meta:
         verbose_name = "Detective Report"
@@ -107,6 +112,35 @@ class DetectiveReport(BaseModel):
 
     def __str__(self):
         return f"Report for {self.case.case_number} by {self.detective} - {self.status}"
+
+
+class ReportedSuspect(BaseModel):
+    """Evidence-based suspects reported in a DetectiveReport.
+
+    This model links a DetectiveReport to an evidence object (generic FK)
+    that the detective marks as a suspect during resolution. It avoids
+    forcing creation of a `Suspect` object at report time.
+    """
+    report = models.ForeignKey(
+        DetectiveReport,
+        on_delete=models.CASCADE,
+        related_name='reported_suspects',
+        verbose_name='Detective Report'
+    )
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        related_name='reported_suspects'
+    )
+    object_id = models.PositiveIntegerField()
+
+    class Meta:
+        verbose_name = "Reported Suspect"
+        verbose_name_plural = "Reported Suspects"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Reported suspect for report {self.report_id}: {self.content_type.model} #{self.object_id}"
 
 
 class Notification(BaseModel):

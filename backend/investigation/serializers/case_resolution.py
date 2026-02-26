@@ -45,19 +45,47 @@ class DetectiveReportSerializer(serializers.ModelSerializer):
     detective_name = serializers.CharField(source='detective.get_full_name', read_only=True)
     sergeant_name = serializers.CharField(source='sergeant.get_full_name', read_only=True, allow_null=True)
     case_number = serializers.CharField(source='case.case_number', read_only=True)
+    reported_suspects = serializers.SerializerMethodField()
+    detective_message = serializers.CharField(read_only=True)
 
     class Meta:
         model = DetectiveReport
         fields = [
             'id', 'case', 'case_number', 'detective', 'detective_name', 'status',
             'sergeant', 'sergeant_name', 'sergeant_message', 'submitted_at',
-            'reviewed_at', 'created_at', 'updated_at',
+            'reviewed_at', 'detective_message', 'created_at', 'updated_at', 'reported_suspects',
         ]
         read_only_fields = ['detective', 'submitted_at', 'sergeant', 'reviewed_at']
 
+    def get_reported_suspects(self, obj):
+        rows = []
+        for rs in getattr(obj, 'reported_suspects').all():
+            rows.append({
+                'id': rs.id,
+                'content_type': rs.content_type.model,
+                'content_type_id': rs.content_type_id,
+                'object_id': rs.object_id,
+            })
+        return rows
+
 
 class DetectiveReportCreateSerializer(serializers.Serializer):
-    pass
+    """Create payload for detective report.
+
+    Accepts `suspects`: list of {content_type_id, object_id} and optional `message`.
+    """
+    suspects = serializers.ListField(
+        child=serializers.DictField(child=serializers.IntegerField()),
+        required=False,
+    )
+    message = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        suspects = data.get('suspects') or []
+        for item in suspects:
+            if 'content_type_id' not in item or 'object_id' not in item:
+                raise serializers.ValidationError({'suspects': 'Each suspect must include content_type_id and object_id.'})
+        return data
 
 
 class SergeantReviewSerializer(serializers.Serializer):

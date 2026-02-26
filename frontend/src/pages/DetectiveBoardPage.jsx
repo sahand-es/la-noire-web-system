@@ -8,6 +8,7 @@ import {
   Spin,
   Typography,
   message,
+  Input,
   Tag,
 } from "antd";
 import { PageHeader } from "../components/PageHeader";
@@ -25,6 +26,8 @@ import {
   createEvidenceLink,
   deleteEvidenceLink,
 } from "../api/detectiveBoard";
+import { createDetectiveReport } from "../api/detectiveBoard";
+import { listNotifications } from "../api/notifications";
 
 const { Text } = Typography;
 
@@ -102,6 +105,11 @@ export function DetectiveBoardPage() {
   const [links, setLinks] = useState([]); // EvidenceLink rows
 
   const [dragging, setDragging] = useState(null); // { key, offsetX, offsetY }
+
+  const [selectedSuspects, setSelectedSuspects] = useState([]); // array of card keys
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [linkFrom, setLinkFrom] = useState(null);
@@ -190,6 +198,20 @@ export function DetectiveBoardPage() {
 
       setCards(all);
       setLinks(normalizeList(linkRes));
+      // reset selected suspects when board refreshes
+      setSelectedSuspects([]);
+      // check for new notifications for this case and notify detective
+      try {
+        const notifs = await listNotifications({ pageSize: 50 });
+        const rows = Array.isArray(notifs) ? notifs : notifs.results || [];
+        rows.forEach((n) => {
+          if (n.case && n.case.id === nextCaseId && !n.read_at) {
+            message.info(n.message || "New document added to case.");
+          }
+        });
+      } catch (e) {
+        // ignore notification errors
+      }
     } catch (err) {
       message.error(err.message || "Failed to load detective board.");
       setCards([]);
@@ -338,6 +360,13 @@ export function DetectiveBoardPage() {
             actions={
               <Space>
                 <Button
+                  type="primary"
+                  onClick={() => setIsReportOpen(true)}
+                  disabled={!caseId || selectedSuspects.length === 0}
+                >
+                  Report suspects
+                </Button>
+                <Button
                   onClick={() => setIsLinkOpen(true)}
                   disabled={!caseId || cards.length < 2}
                 >
@@ -436,7 +465,26 @@ export function DetectiveBoardPage() {
                       </div>
                     }
                     extra={
-                      <Tag color={getEvidenceColor(c.model)}>#{c.objectId}</Tag>
+                      <div className="flex items-center gap-2">
+                        <Tag color={getEvidenceColor(c.model)}>
+                          #{c.objectId}
+                        </Tag>
+                        <Button
+                          size="small"
+                          danger={selectedSuspects.includes(c.key)}
+                          onClick={() => {
+                            setSelectedSuspects((prev) =>
+                              prev.includes(c.key)
+                                ? prev.filter((k) => k !== c.key)
+                                : [...prev, c.key],
+                            );
+                          }}
+                        >
+                          {selectedSuspects.includes(c.key)
+                            ? "Suspect"
+                            : "Mark"}
+                        </Button>
+                      </div>
                     }
                   >
                     <div
@@ -518,6 +566,70 @@ export function DetectiveBoardPage() {
             options={cardOptions}
             placeholder="To"
             allowClear
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        title="Report Suspects to Sergeant"
+        open={isReportOpen}
+        onCancel={() => setIsReportOpen(false)}
+        onOk={async () => {
+          if (!caseId) return;
+          setReportSubmitting(true);
+          try {
+            const suspects = selectedSuspects
+              .map((k) => {
+                const c = cards.find((x) => x.key === k);
+                return c
+                  ? { content_type_id: c.ctId, object_id: c.objectId }
+                  : null;
+              })
+              .filter(Boolean);
+
+            const payload = { suspects, message: reportMessage || "" };
+
+            await createDetectiveReport(caseId, payload);
+            message.success(
+              "Report submitted to sergeant. Waiting for review.",
+            );
+            setIsReportOpen(false);
+            setReportMessage("");
+            setSelectedSuspects([]);
+            fetchBoard(caseId);
+          } catch (err) {
+            message.error(err.message || "Failed to submit report.");
+          } finally {
+            setReportSubmitting(false);
+          }
+        }}
+        okText="Submit"
+        confirmLoading={reportSubmitting}
+      >
+        <div className="flex flex-col gap-3">
+          <Text>
+            Select suspects and add reasoning below. Sergeant will review and
+            respond.
+          </Text>
+          <div className="flex flex-wrap gap-2">
+            {selectedSuspects.length ? (
+              selectedSuspects.map((k) => {
+                const card = cards.find((c) => c.key === k);
+                return (
+                  <Tag key={k} color="red">
+                    {card ? card.title : k}
+                  </Tag>
+                );
+              })
+            ) : (
+              <Text type="secondary">No suspects selected.</Text>
+            )}
+          </div>
+          <Input.TextArea
+            rows={4}
+            value={reportMessage}
+            onChange={(e) => setReportMessage(e.target.value)}
+            placeholder="Reasoning / notes (optional)"
           />
         </div>
       </Modal>
