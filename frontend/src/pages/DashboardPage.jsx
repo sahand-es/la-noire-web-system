@@ -372,13 +372,6 @@ export function DashboardPage() {
     });
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
@@ -392,9 +385,6 @@ export function DashboardPage() {
               {user.roles?.map((r) => r.name).join(", ") || "Base user"}
             </Text>
           </div>
-          <Button type="primary" danger onClick={handleLogout}>
-            Logout
-          </Button>
         </div>
 
         {/* Modules Grid */}

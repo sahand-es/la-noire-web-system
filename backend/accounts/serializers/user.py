@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from core.models import UserProfile
-from accounts.models import Role
+from accounts.models import Role, ActionPermission
 
 User = get_user_model()
 
@@ -13,6 +13,43 @@ class RoleSerializer(serializers.ModelSerializer):
         model = Role
         fields = ['id', 'name', 'description', 'is_active']
         read_only_fields = ['id']
+
+
+class ActionPermissionSerializer(serializers.ModelSerializer):
+    roles = RoleSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ActionPermission
+        fields = ['id', 'codename', 'name', 'roles']
+        read_only_fields = ['id']
+
+
+class ActionPermissionCreateUpdateSerializer(serializers.ModelSerializer):
+    roles = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Role.objects.filter(is_active=True),
+        required=False,
+    )
+
+    class Meta:
+        model = ActionPermission
+        fields = ['codename', 'name', 'roles']
+
+    def create(self, validated_data):
+        roles = validated_data.pop('roles', [])
+        instance = ActionPermission.objects.create(**validated_data)
+        if roles:
+            instance.roles.set(roles)
+        return instance
+
+    def update(self, instance, validated_data):
+        roles = validated_data.pop('roles', None)
+        instance.codename = validated_data.get('codename', instance.codename)
+        instance.name = validated_data.get('name', instance.name)
+        instance.save()
+        if roles is not None:
+            instance.roles.set(roles)
+        return instance
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

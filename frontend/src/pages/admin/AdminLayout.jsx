@@ -1,133 +1,123 @@
-import { useState } from "react";
-import { Layout, Menu, Typography, Button } from "antd";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
+import { Navbar } from "../../components/Navbar";
+import { AppSider } from "../../components/AppSider";
+import { NotificationAlertPoller } from "../../components/NotificationAlertPoller";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   UserOutlined,
-  TeamOutlined,
-  FolderOpenOutlined,
-  FileTextOutlined,
-  ExperimentOutlined,
-  TrophyOutlined,
   HomeOutlined,
+  AppstoreOutlined,
   LogoutOutlined,
-  DashboardOutlined,
 } from "@ant-design/icons";
 
-const { Header, Sider, Content } = Layout;
-const { Title } = Typography;
+const { Content } = Layout;
+const { Text } = Typography;
 
-const ADMIN_MENU_ITEMS = [
-  {
-    key: "/admin",
-    icon: <DashboardOutlined />,
-    label: "Dashboard",
-  },
-  {
-    key: "accounts",
-    icon: <UserOutlined />,
-    label: "Accounts",
-    children: [
-      { key: "/admin/users", label: "Users" },
-      { key: "/admin/roles", label: "Roles" },
-      { key: "/admin/permissions", label: "Permissions" },
-    ],
-  },
-  {
-    key: "cases",
-    icon: <FolderOpenOutlined />,
-    label: "Cases",
-    children: [
-      { key: "/admin/cases", label: "Cases" },
-      { key: "/admin/complaints", label: "Complaints" },
-    ],
-  },
-  {
-    key: "evidence",
-    icon: <ExperimentOutlined />,
-    label: "Evidence",
-    children: [
-      { key: "/admin/witness-testimonies", label: "Witness Testimonies" },
-      { key: "/admin/biological-evidence", label: "Biological Evidence" },
-      { key: "/admin/vehicle-evidence", label: "Vehicle Evidence" },
-      { key: "/admin/document-evidence", label: "Document Evidence" },
-      { key: "/admin/other-evidence", label: "Other Evidence" },
-    ],
-  },
-  {
-    key: "investigation",
-    icon: <FileTextOutlined />,
-    label: "Investigation",
-    children: [
-      { key: "/admin/evidence-links", label: "Evidence Links" },
-      { key: "/admin/detective-reports", label: "Detective Reports" },
-      { key: "/admin/suspect-links", label: "Suspect Links" },
-      { key: "/admin/trials", label: "Trials" },
-    ],
-  },
-  {
-    key: "rewards",
-    icon: <TrophyOutlined />,
-    label: "Rewards",
-    children: [{ key: "/admin/rewards", label: "Rewards" }],
-  },
-];
+function readUser() {
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function adminTitleForPath(pathname) {
+  if (pathname === "/admin") return "Dashboard";
+  if (pathname.startsWith("/admin/users")) return "Users";
+  if (pathname.startsWith("/admin/roles")) return "Roles";
+  if (pathname.startsWith("/admin/permissions")) return "Permissions";
+  if (pathname.startsWith("/admin/cases")) return "Cases";
+  if (pathname.startsWith("/admin/complaints")) return "Complaints";
+  if (pathname.startsWith("/admin/rewards")) return "Rewards";
+  return "Admin";
+}
 
 export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState(readUser());
   const navigate = useNavigate();
   const location = useLocation();
+  const adminPageTitle = adminTitleForPath(location.pathname);
+  const isOnAdminDashboard = location.pathname === "/admin";
+  const adminHomeNavConfig = isOnAdminDashboard
+    ? { icon: <AppstoreOutlined />, to: "/dashboard", label: "Back to app" }
+    : { icon: <HomeOutlined />, to: "/admin", label: "Admin dashboard" };
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
-    navigate("/login");
+  useEffect(() => {
+    function onStorage() {
+      setUser(readUser());
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const userMenu = {
+    items: [
+      {
+        key: "profile",
+        label: (
+          <div className="flex flex-col">
+            <Text strong>{user?.username || "User"}</Text>
+            <Text type="secondary">{user?.email || ""}</Text>
+          </div>
+        ),
+        icon: <UserOutlined />,
+        onClick: () => navigate("/profile"),
+      },
+      { type: "divider" },
+      {
+        key: "logout",
+        label: "Logout",
+        icon: <LogoutOutlined />,
+        onClick: () => {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("user");
+          navigate("/login");
+        },
+      },
+    ],
   };
 
   return (
-    <Layout className="min-h-screen">
-      <Sider
-        collapsible
+    <Layout className="h-screen overflow-hidden flex">
+      <NotificationAlertPoller />
+      <AppSider
+        variant="admin"
         collapsed={collapsed}
         onCollapse={setCollapsed}
-        width={250}
-      >
-        <div className="p-4 flex items-center justify-center">
-          <Title level={4} className="m-0 text-white">
-            {collapsed ? "LA" : "LA Noire Admin"}
-          </Title>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          defaultOpenKeys={["accounts", "cases", "evidence", "investigation"]}
-          items={ADMIN_MENU_ITEMS}
-          onClick={({ key }) => navigate(key)}
+      />
+      <Layout className="flex-1 flex flex-col min-h-0">
+        <Navbar
+          start={
+            <>
+              <Button
+                type="text"
+                icon={adminHomeNavConfig.icon}
+                onClick={() => navigate(adminHomeNavConfig.to)}
+                className="shrink-0 transition-all duration-200 hover:opacity-80 active:opacity-70 p-1"
+                aria-label={adminHomeNavConfig.label}
+              />
+              <Breadcrumb
+                items={[
+                  { title: <Link to="/admin">Admin</Link> },
+                  { title: adminPageTitle },
+                ]}
+              />
+            </>
+          }
+          end={
+            <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
+              <Button icon={<UserOutlined />}>
+                {user?.username || "Account"}
+              </Button>
+            </Dropdown>
+          }
         />
-      </Sider>
-      <Layout>
-        <Header className="flex justify-between items-center px-6">
-          <div className="flex gap-4">
-            <Button icon={<HomeOutlined />} onClick={() => navigate("/")}>
-              Home
-            </Button>
-            <Button
-              icon={<DashboardOutlined />}
-              onClick={() => navigate("/dashboard")}
-            >
-              Dashboard
-            </Button>
-          </div>
-          <Button
-            type="primary"
-            danger
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </Header>
-        <Content className="m-6">
+        <Content className="p-6 overflow-auto flex-1 min-h-0">
           <Outlet />
         </Content>
       </Layout>

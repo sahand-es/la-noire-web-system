@@ -5,13 +5,14 @@ import {
   FolderOpenOutlined,
   FileTextOutlined,
   TrophyOutlined,
-  ExperimentOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { getCaseStatistics } from "../../api/calls";
 
 const { Title } = Typography;
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,7 +37,7 @@ export function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center py-24">
         <Spin size="large" />
       </div>
     );
@@ -116,18 +117,30 @@ export function AdminDashboard() {
 
       <Card title="Quick Actions">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 border rounded">
+          <Card
+            hoverable
+            className="cursor-pointer"
+            onClick={() => navigate("/admin/users")}
+          >
             <Title level={5}>User Management</Title>
             <p className="text-sm">Manage users and assign roles</p>
-          </div>
-          <div className="p-4 border rounded">
+          </Card>
+          <Card
+            hoverable
+            className="cursor-pointer"
+            onClick={() => navigate("/admin/cases")}
+          >
             <Title level={5}>Case Management</Title>
             <p className="text-sm">View and manage all cases</p>
-          </div>
-          <div className="p-4 border rounded">
+          </Card>
+          <Card
+            hoverable
+            className="cursor-pointer"
+            onClick={() => navigate("/admin/cases")}
+          >
             <Title level={5}>Evidence Management</Title>
             <p className="text-sm">Manage all types of evidence</p>
-          </div>
+          </Card>
         </div>
       </Card>
     </div>

@@ -182,9 +182,9 @@ export function ComplaintsPage() {
           return <Tag color="blue">Case #{caseId}</Tag>;
         }
         if (row?.status === "VOIDED") {
-          return <Tag color="red">Voided</Tag>;
+          return <Tag color="error">Voided</Tag>;
         }
-        return <Tag color="orange">Error: No Case</Tag>;
+        return <Tag color="warning">Error: No Case</Tag>;
       },
     },
     {

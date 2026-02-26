@@ -32,6 +32,7 @@ export function AdminTableView({
   columns,
   formFields,
   searchFields = [],
+  fieldOptions = {},
 }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -162,10 +163,18 @@ export function AdminTableView({
         return (
           <Form.Item {...commonProps}>
             <Select
-              options={field.options}
+              options={field.options ?? fieldOptions[field.name]}
               placeholder={`Select ${field.label}`}
               showSearch={field.searchable}
               mode={field.multiple ? "multiple" : undefined}
+              filterOption={
+                field.searchable
+                  ? (input, option) =>
+                      (option?.label ?? "")
+                        .toLowerCase()
+                        .includes((input || "").toLowerCase())
+                  : undefined
+              }
             />
           </Form.Item>
         );

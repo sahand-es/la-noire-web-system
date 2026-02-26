@@ -29,8 +29,13 @@ const columns = [
     dataIndex: "priority_level",
     key: "priority_level",
     render: (level) => {
-      const colors = { 1: "red", 2: "orange", 3: "blue", critical: "purple" };
-      return <Tag color={colors[level]}>{level}</Tag>;
+      const colors = {
+        1: "error",
+        2: "warning",
+        3: "blue",
+        critical: "purple",
+      };
+      return <Tag color={colors[level] ?? "default"}>{level}</Tag>;
     },
   },
   {

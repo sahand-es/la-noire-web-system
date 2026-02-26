@@ -5,6 +5,7 @@ from .user import (
     UserProfileView,
     ChangePasswordView,
     RoleViewSet,
+    ActionPermissionViewSet,
     UserViewSet,
 )
 
@@ -15,5 +16,6 @@ __all__ = [
     'UserProfileView',
     'ChangePasswordView',
     'RoleViewSet',
+    'ActionPermissionViewSet',
     'UserViewSet',
 ]

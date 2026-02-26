@@ -30,7 +30,7 @@ const columns = [
     dataIndex: "is_active",
     key: "is_active",
     render: (active) => (
-      <Tag color={active ? "green" : "red"}>{active ? "Yes" : "No"}</Tag>
+      <Tag color={active ? "success" : "error"}>{active ? "Yes" : "No"}</Tag>
     ),
   },
 ];

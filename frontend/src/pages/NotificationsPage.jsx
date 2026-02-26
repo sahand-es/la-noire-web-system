@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Card, Space, Spin, Table, Tag, Typography, message } from "antd";
 import { PageHeader } from "../components/PageHeader";
 import { listNotifications, markNotificationRead } from "../api/notifications";
@@ -28,26 +28,37 @@ export function NotificationsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  async function fetchData(nextPage = page, nextPageSize = pageSize) {
-    setLoading(true);
-    try {
-      const data = await listNotifications({ page: nextPage, pageSize: nextPageSize });
-      const normalized = normalizeResponse(data);
-      setRows(normalized.rows);
-      setTotal(normalized.total);
-    } catch (err) {
-      message.error(err.message || "Failed to load notifications.");
-      setRows([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const fetchData = useCallback(
+    async (nextPage = page, nextPageSize = pageSize, silent = false) => {
+      if (!silent) setLoading(true);
+      try {
+        const data = await listNotifications({
+          page: nextPage,
+          pageSize: nextPageSize,
+        });
+        const normalized = normalizeResponse(data);
+        setRows(normalized.rows);
+        setTotal(normalized.total);
+      } catch (err) {
+        if (!silent) message.error(err.message || "Failed to load notifications.");
+        setRows([]);
+        setTotal(0);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [page, pageSize],
+  );
 
   useEffect(() => {
     fetchData(1, pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => fetchData(page, pageSize, true), 5000);
+    return () => clearInterval(id);
+  }, [fetchData, page, pageSize]);
 
   async function onMarkRead(id) {
     try {
@@ -60,26 +71,36 @@ export function NotificationsPage() {
     }
   }
 
-  const columns = useMemo(() => {
-    return [
-      { title: "Type", dataIndex: "type", key: "type", width: 180, render: (v) => <Tag>{v || "-"}</Tag> },
-      { title: "Message", dataIndex: "message", key: "message", render: (v) => v || "-" },
-      { title: "Created", dataIndex: "created_at", key: "created_at", width: 220, render: (v) => formatDate(v) },
-      {
-        title: "",
-        key: "actions",
-        width: 140,
-        render: (_, r) =>
-          r.read_at ? (
-            <Text type="secondary">Read</Text>
-          ) : (
-            <Button type="primary" onClick={() => onMarkRead(r.id)}>
-              Mark read
-            </Button>
-          ),
-      },
-    ];
-  }, []);
+  const columns = [
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      width: 180,
+      render: (v) => <Tag>{v || "-"}</Tag>,
+    },
+    { title: "Message", dataIndex: "message", key: "message", render: (v) => v || "-" },
+    {
+      title: "Created",
+      dataIndex: "created_at",
+      key: "created_at",
+      width: 220,
+      render: (v) => formatDate(v),
+    },
+    {
+      title: "",
+      key: "actions",
+      width: 140,
+      render: (_, r) =>
+        r.read_at ? (
+          <Text type="secondary">Read</Text>
+        ) : (
+          <Button type="primary" onClick={() => onMarkRead(r.id)}>
+            Mark read
+          </Button>
+        ),
+    },
+  ];
 
   return (
     <div className="min-h-screen">
