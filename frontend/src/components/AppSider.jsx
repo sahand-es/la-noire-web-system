@@ -3,6 +3,7 @@ import { Layout, Menu, Typography } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AppstoreOutlined,
+  AuditOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
   ExperimentOutlined,
@@ -68,6 +69,10 @@ function buildAppMenuItems(user) {
 
   if (hasRole(user, "Detective")) {
     items.push({ key: "/detective-board", icon: <SafetyOutlined />, label: <Link to="/detective-board">Detective Board</Link> });
+  }
+
+  if (hasRole(user, "Sergeant")) {
+    items.push({ key: "/detective-reviews", icon: <AuditOutlined />, label: <Link to="/detective-reviews">Detective Reviews</Link> });
   }
 
   if (hasAnyRole(user, ["Judge", "Captain", "Police Chief"])) {

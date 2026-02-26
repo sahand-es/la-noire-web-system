@@ -11,6 +11,7 @@ import {
   Space,
   Spin,
   Table,
+  Tag,
   Typography,
   message,
 } from "antd";
@@ -21,6 +22,11 @@ import {
   listCaseDetectives,
   listCases,
 } from "../api/cases";
+import {
+  listSuspectLinks,
+  markSuspectWanted,
+  markSuspectCaptured,
+} from "../api/calls";
 
 const { Title, Text } = Typography;
 
@@ -87,6 +93,21 @@ export function CasesPage() {
     return roleNames.some((name) => allowed.includes(name));
   }, [roleNames]);
 
+  const canManageSuspectState = useMemo(() => {
+    const allowed = [
+      "Detective",
+      "Sergeant",
+      "Captain",
+      "Police Chief",
+      "System Administrator",
+    ];
+    return roleNames.some((name) => allowed.includes(name));
+  }, [roleNames]);
+
+  const [suspectLinks, setSuspectLinks] = useState([]);
+  const [suspectLinksLoading, setSuspectLinksLoading] = useState(false);
+  const [suspectActionLinkId, setSuspectActionLinkId] = useState(null);
+
   async function loadDetectives() {
     if (!canAssignDetective) return;
     setIsDetectivesLoading(true);
@@ -150,6 +171,55 @@ export function CasesPage() {
     setAssignDetectiveId(selected.assigned_detective || null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen, selected, canAssignDetective]);
+
+  async function fetchSuspectLinks() {
+    if (!selected?.id) return;
+    setSuspectLinksLoading(true);
+    try {
+      const data = await listSuspectLinks(selected.id);
+      const list = Array.isArray(data) ? data : data?.results || data?.data || [];
+      setSuspectLinks(list);
+    } catch (err) {
+      message.error(err.message || "Failed to load suspects.");
+      setSuspectLinks([]);
+    } finally {
+      setSuspectLinksLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isModalOpen || !selected) return;
+    fetchSuspectLinks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen, selected?.id]);
+
+  async function handleMarkWanted(link) {
+    if (!selected?.id) return;
+    setSuspectActionLinkId(link.id);
+    try {
+      await markSuspectWanted(selected.id, link.id);
+      message.success("Suspect marked as wanted.");
+      fetchSuspectLinks();
+    } catch (err) {
+      message.error(err.message || "Failed to mark suspect as wanted.");
+    } finally {
+      setSuspectActionLinkId(null);
+    }
+  }
+
+  async function handleMarkCaptured(link) {
+    if (!selected?.id) return;
+    setSuspectActionLinkId(link.id);
+    try {
+      await markSuspectCaptured(selected.id, link.id, {});
+      message.success("Suspect marked as captured.");
+      fetchSuspectLinks();
+    } catch (err) {
+      message.error(err.message || "Failed to mark suspect as captured.");
+    } finally {
+      setSuspectActionLinkId(null);
+    }
+  }
 
   async function handleAssignDetective() {
     if (!selected?.id) return;
@@ -504,6 +574,62 @@ export function CasesPage() {
                     </div>
                   </div>
                 ) : null}
+
+                <div className="flex flex-col gap-2">
+                  <Text strong>Suspects</Text>
+                  {suspectLinksLoading ? (
+                    <Spin size="small" />
+                  ) : suspectLinks.length === 0 ? (
+                    <Text type="secondary">No suspects linked to this case.</Text>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {suspectLinks.map((link) => (
+                        <Card key={link.id} size="small">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <Text strong>
+                                {link.suspect_name || `${link.suspect_national_id || "—"}`}
+                              </Text>
+                              <div className="mt-0.5">
+                                <Text type="secondary" className="text-xs">
+                                  National ID: {link.suspect_national_id || "-"}
+                                </Text>
+                                {" · "}
+                                <Tag color={link.suspect_is_wanted ? "red" : "green"}>
+                                  {link.suspect_status || "-"}
+                                </Tag>
+                              </div>
+                            </div>
+                            {canManageSuspectState ? (
+                              <Space>
+                                {!link.suspect_is_wanted ? (
+                                  <Button
+                                    size="small"
+                                    danger
+                                    onClick={() => handleMarkWanted(link)}
+                                    loading={suspectActionLinkId === link.id}
+                                  >
+                                    Mark as Wanted
+                                  </Button>
+                                ) : null}
+                                {link.suspect_is_wanted ? (
+                                  <Button
+                                    size="small"
+                                    type="primary"
+                                    onClick={() => handleMarkCaptured(link)}
+                                    loading={suspectActionLinkId === link.id}
+                                  >
+                                    Mark as Captured
+                                  </Button>
+                                ) : null}
+                              </Space>
+                            ) : null}
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : null}
           </Modal>

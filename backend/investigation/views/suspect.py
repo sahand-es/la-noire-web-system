@@ -149,3 +149,28 @@ class SuspectCaseLinkViewSet(viewsets.GenericViewSet):
             'data': SuspectCaseLinkSerializer(link).data,
             'message': 'Captain opinion approved.' if link.chief_approved else 'Captain opinion rejected.',
         })
+
+    @action(detail=True, methods=['post'], url_path='mark-as-wanted')
+    def mark_as_wanted(self, request, case_pk=None, pk=None):
+        """Mark suspect as wanted (fugitive). Starts pursuit; after 30 days appears on Intensive Pursuit."""
+        link = get_object_or_404(SuspectCaseLink, case_id=case_pk, pk=pk)
+        suspect = link.suspect
+        suspect.mark_as_wanted()
+        return Response({
+            'status': 'success',
+            'data': SuspectCaseLinkSerializer(link).data,
+            'message': f'{suspect.full_name} marked as wanted. Pursuit started.',
+        })
+
+    @action(detail=True, methods=['post'], url_path='mark-as-captured')
+    def mark_as_captured(self, request, case_pk=None, pk=None):
+        """Mark suspect as captured (detained). Stops pursuit."""
+        link = get_object_or_404(SuspectCaseLink, case_id=case_pk, pk=pk)
+        suspect = link.suspect
+        detention_location = (request.data or {}).get('detention_location', '')
+        suspect.mark_as_captured(detention_location=detention_location)
+        return Response({
+            'status': 'success',
+            'data': SuspectCaseLinkSerializer(link).data,
+            'message': f'{suspect.full_name} marked as captured.',
+        })

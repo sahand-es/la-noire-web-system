@@ -29,6 +29,9 @@ class IntensivePursuitSerializer(serializers.ModelSerializer):
 
 class SuspectCaseLinkSerializer(serializers.ModelSerializer):
     suspect_name = serializers.CharField(source='suspect.full_name', read_only=True)
+    suspect_national_id = serializers.CharField(source='suspect.national_id', read_only=True)
+    suspect_is_wanted = serializers.BooleanField(source='suspect.is_wanted', read_only=True)
+    suspect_status = serializers.CharField(source='suspect.status', read_only=True)
     case_number = serializers.CharField(source='case.case_number', read_only=True)
     average_guilt_score = serializers.FloatField(read_only=True)
     has_both_assessments = serializers.BooleanField(read_only=True)
@@ -38,7 +41,7 @@ class SuspectCaseLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = SuspectCaseLink
         fields = [
-            'id', 'suspect', 'suspect_name', 'case', 'case_number',
+            'id', 'suspect', 'suspect_name', 'suspect_national_id', 'suspect_is_wanted', 'suspect_status', 'case', 'case_number',
             'detective_guilt_score', 'sergeant_guilt_score',
             'detective_assessment_date', 'sergeant_assessment_date',
             'average_guilt_score', 'has_both_assessments',

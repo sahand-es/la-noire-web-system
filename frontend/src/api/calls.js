@@ -226,6 +226,17 @@ export function chiefApproval(caseId, linkId, data) {
   );
 }
 
+export function markSuspectWanted(caseId, linkId) {
+  return post(`cases/${caseId}/investigation/suspect-links/${linkId}/mark-as-wanted/`, {});
+}
+
+export function markSuspectCaptured(caseId, linkId, data = {}) {
+  return post(
+    `cases/${caseId}/investigation/suspect-links/${linkId}/mark-as-captured/`,
+    data,
+  );
+}
+
 export function getTrial(caseId) {
   return get(`cases/${caseId}/investigation/trial/`);
 }
