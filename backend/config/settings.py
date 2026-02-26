@@ -11,6 +11,11 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 
 _csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
+if not CSRF_TRUSTED_ORIGINS:
+    for h in ALLOWED_HOSTS:
+        h = h.strip()
+        if h and h not in ('localhost', '127.0.0.1', '*'):
+            CSRF_TRUSTED_ORIGINS.extend([f'https://{h}', f'http://{h}'])
 
 INSTALLED_APPS = [
     'cases',
