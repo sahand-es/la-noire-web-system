@@ -9,5 +9,5 @@ export function listNotifications(params = {}) {
 }
 
 export function markNotificationRead(notificationId) {
-  return post(`investigation/notifications/${notificationId}/mark-read/`, {});
+  return post(`investigation/notifications/${notificationId}/reads/`, {});
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
 import { Navbar } from "./Navbar";
 import { AppSider } from "./AppSider";
+import { NotificationAlertPoller } from "./NotificationAlertPoller";
 import {
   LogoutOutlined,
   UserOutlined,
@@ -100,6 +101,7 @@ export function AppLayout() {
 
   return (
     <Layout className="h-screen overflow-hidden flex">
+      <NotificationAlertPoller />
       <AppSider
         variant="app"
         collapsed={collapsed}

@@ -95,11 +95,17 @@ class SergeantReviewSerializer(serializers.Serializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     case_number = serializers.CharField(source='case.case_number', read_only=True)
+    type = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
         fields = [
             'id', 'case', 'case_number', 'recipient', 'content_type', 'object_id',
-            'message', 'read_at', 'created_at',
+            'type', 'message', 'read_at', 'created_at',
         ]
         read_only_fields = ['recipient', 'read_at']
+
+    def get_type(self, obj):
+        if obj.content_type_id:
+            return getattr(obj.content_type, 'model', None) or str(obj.content_type_id)
+        return None

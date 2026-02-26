@@ -41,7 +41,6 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
         <Route
           path="/login"
           element={
@@ -172,6 +171,7 @@ function App() {
             }
           />
           <Route path="statistics" element={<StatisticsPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

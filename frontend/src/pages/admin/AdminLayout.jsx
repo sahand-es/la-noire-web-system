@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
 import { Navbar } from "../../components/Navbar";
 import { AppSider } from "../../components/AppSider";
+import { NotificationAlertPoller } from "../../components/NotificationAlertPoller";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   UserOutlined,
@@ -83,6 +84,7 @@ export function AdminLayout() {
 
   return (
     <Layout className="h-screen overflow-hidden flex">
+      <NotificationAlertPoller />
       <AppSider
         variant="admin"
         collapsed={collapsed}
