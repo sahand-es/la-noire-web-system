@@ -616,7 +616,7 @@ export function DetectiveBoardPage() {
               selectedSuspects.map((k) => {
                 const card = cards.find((c) => c.key === k);
                 return (
-                  <Tag key={k} color="red">
+                  <Tag key={k} color="error">
                     {card ? card.title : k}
                   </Tag>
                 );

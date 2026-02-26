@@ -52,7 +52,7 @@ const columns = [
     dataIndex: "is_verified",
     key: "is_verified",
     render: (verified) => (
-      <Tag color={verified ? "green" : "orange"}>{verified ? "Yes" : "No"}</Tag>
+      <Tag color={verified ? "success" : "warning"}>{verified ? "Yes" : "No"}</Tag>
     ),
   },
   {
@@ -60,7 +60,7 @@ const columns = [
     dataIndex: "is_active",
     key: "is_active",
     render: (active) => (
-      <Tag color={active ? "green" : "red"}>{active ? "Yes" : "No"}</Tag>
+      <Tag color={active ? "success" : "error"}>{active ? "Yes" : "No"}</Tag>
     ),
   },
 ];

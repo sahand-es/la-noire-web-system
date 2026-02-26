@@ -2,7 +2,6 @@ import { AdminTableView } from "../../components/admin/AdminTableView";
 import { listRoles, getRole } from "../../api/calls";
 import { Tag } from "antd";
 import { get, post, put, del } from "../../api/request";
-import { deskLightTokens } from "../../theme";
 
 const fetchRoles = () => listRoles();
 const createRole = (data) => post("roles/", data);
@@ -31,9 +30,7 @@ const columns = [
     dataIndex: "is_active",
     key: "is_active",
     render: (active) => (
-      <Tag color={active ? deskLightTokens.colorSuccess : deskLightTokens.colorError}>
-        {active ? "Yes" : "No"}
-      </Tag>
+      <Tag color={active ? "success" : "error"}>{active ? "Yes" : "No"}</Tag>
     ),
   },
 ];
