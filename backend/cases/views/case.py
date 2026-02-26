@@ -30,6 +30,7 @@ from accounts.permissions import (
     IsCadetOrOfficer,
     IsDetectiveOrSergeantOrChief,
     IsSergeantOrCaptainOrChief,
+    IsSergeantOrCaptainOrChiefOrAdmin,
 )
 
 
@@ -55,12 +56,12 @@ class CaseViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         if self.action == 'create':
             return [IsPoliceRankExceptCadet()]
-        if self.action == 'detectives':
-            return [IsSergeantOrCaptainOrChief()]
+        if self.action in ['detectives', 'judges']:
+            return [IsSergeantOrCaptainOrChiefOrAdmin()]
         if self.action == 'all_names':
             return [IsAuthenticated()]
         if self.action == 'list':
-            return [IsCadetOrOfficer()]
+            return [IsAuthenticated()]  # Judge can list (filtered); Cadet/Officer etc. too
         if self.action == 'retrieve':
             return [IsCadetOrOfficer()]
         if self.action in ['update', 'partial_update']:
@@ -87,8 +88,20 @@ class CaseViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=CaseStatus.OPEN)
         elif user.has_any_role(['Police Officer', 'Sergeant', 'Captain', 'Police Chief']):
             pass
+        elif user.is_superuser or user.has_role('System Administrator'):
+            pass
+        elif user.has_role('Judge'):
+            queryset = queryset.filter(trial__isnull=False)  # only cases with trials
         else:
             queryset = queryset.none()
+
+        without_trial = self.request.query_params.get('without_trial')
+        if without_trial:
+            queryset = queryset.filter(trial__isnull=True)
+
+        has_trial = self.request.query_params.get('has_trial')
+        if has_trial:
+            queryset = queryset.filter(trial__isnull=False)
 
         status_filter = self.request.query_params.get('status')
         if status_filter:
@@ -230,6 +243,26 @@ class CaseViewSet(viewsets.ModelViewSet):
                 'national_id': item.national_id,
             }
             for item in detectives
+        ]
+
+        return Response({'status': 'success', 'data': data})
+
+    @action(detail=False, methods=['get'], url_path='judges')
+    def judges(self, request):
+        judges = UserProfile.objects.filter(
+            roles__name='Judge',
+            roles__is_active=True,
+            is_active=True,
+        ).distinct().order_by('first_name', 'last_name', 'username')
+
+        data = [
+            {
+                'id': item.id,
+                'full_name': item.get_full_name(),
+                'username': item.username,
+                'national_id': item.national_id,
+            }
+            for item in judges
         ]
 
         return Response({'status': 'success', 'data': data})

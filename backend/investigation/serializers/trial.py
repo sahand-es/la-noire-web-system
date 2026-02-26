@@ -18,6 +18,11 @@ class TrialSerializer(serializers.ModelSerializer):
         read_only_fields = ['case', 'judge', 'verdict_date']
 
 
+class CreateTrialSerializer(serializers.Serializer):
+    judge_id = serializers.IntegerField(help_text='User ID of the judge who will preside')
+    scheduled_date = serializers.DateTimeField(help_text='When the trial is scheduled')
+
+
 class RecordVerdictSerializer(serializers.Serializer):
     verdict = serializers.ChoiceField(choices=TrialVerdict.choices)
     punishment = serializers.CharField(required=False, allow_blank=True)

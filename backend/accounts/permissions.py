@@ -159,6 +159,13 @@ class IsSergeantOrCaptainOrChief(HasAnyRole):
     role_names = SERGEANT_CAPTAIN_CHIEF_ROLES
 
 
+class IsSergeantOrCaptainOrChiefOrAdmin(IsSergeantOrCaptainOrChief):
+    """Allow Sergeant, Captain, Police Chief, or superuser."""
+
+    def has_permission(self, request, view):
+        return _is_superuser(request.user) or super().has_permission(request, view)
+
+
 # Object-level
 class IsComplainant(BasePermission):
     def has_permission(self, request, view):

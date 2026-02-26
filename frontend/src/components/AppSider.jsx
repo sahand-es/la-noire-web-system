@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AppstoreOutlined,
   AuditOutlined,
+  CheckCircleOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
   ExperimentOutlined,
@@ -56,7 +57,7 @@ function buildAppMenuItems(user) {
     "Police Officer", "Patrol Officer", "Detective", "Sergeant", "Captain", "Police Chief", "Cadet",
   ]);
 
-  if (isPoliceStaff) {
+  if (isPoliceStaff || isAdmin) {
     items.push(
       { key: "/cases", icon: <FolderOpenOutlined />, label: <Link to="/cases">Cases</Link> },
       { key: "/evidence", icon: <ExperimentOutlined />, label: <Link to="/evidence">Evidence</Link> },
@@ -75,7 +76,15 @@ function buildAppMenuItems(user) {
     items.push({ key: "/detective-reviews", icon: <AuditOutlined />, label: <Link to="/detective-reviews">Detective Reviews</Link> });
   }
 
-  if (hasAnyRole(user, ["Judge", "Captain", "Police Chief"])) {
+  if (hasAnyRole(user, ["Captain", "Police Chief"])) {
+    items.push({ key: "/approvals", icon: <CheckCircleOutlined />, label: <Link to="/approvals">Case Approvals</Link> });
+  }
+
+  if (hasAnyRole(user, ["Judge", "Sergeant", "Captain", "Police Chief", "System Administrator"])) {
+    items.push({ key: "/trials", icon: <AuditOutlined />, label: <Link to="/trials">Trials</Link> });
+  }
+
+  if (hasAnyRole(user, ["Judge", "Sergeant", "Captain", "Police Chief"])) {
     items.push({ key: "/reports", icon: <FileTextOutlined />, label: <Link to="/reports">Reports</Link> });
   }
 
@@ -129,6 +138,7 @@ function getOpenKeysForPath(pathname) {
 
 function getAppSelectedKey(pathname) {
   if (pathname.startsWith("/complaints/") && pathname !== "/complaints/new") return "/complaints";
+  if (pathname.startsWith("/rewards/") && pathname !== "/rewards") return "/rewards";
   if (pathname.startsWith("/admin")) return "/admin";
   return pathname;
 }

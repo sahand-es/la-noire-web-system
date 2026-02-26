@@ -24,6 +24,6 @@ urlpatterns = [
     path('suspect-links/<int:pk>/chief-approval/', SuspectCaseLinkViewSet.as_view({'post': 'chief_approval'}), name='suspect-link-chief-approval'),
     path('suspect-links/<int:pk>/mark-as-wanted/', SuspectCaseLinkViewSet.as_view({'post': 'mark_as_wanted'}), name='suspect-link-mark-as-wanted'),
     path('suspect-links/<int:pk>/mark-as-captured/', SuspectCaseLinkViewSet.as_view({'post': 'mark_as_captured'}), name='suspect-link-mark-as-captured'),
-    path('trial/', TrialViewSet.as_view({'get': 'retrieve'}), name='trial'),
+    path('trial/', TrialViewSet.as_view({'get': 'retrieve', 'post': 'create'}), name='trial'),
     path('trial/record-verdict/', TrialViewSet.as_view({'post': 'record_verdict'}), name='trial-record-verdict'),
 ]
