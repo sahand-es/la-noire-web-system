@@ -59,19 +59,41 @@ function App() {
           }
         />
 
-        {/* All authenticated pages share the AppLayout */}
+        {/* Admin: standalone layout (no AppLayout) */}
         <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <RoleRoute roles={["System Administrator"]}>
+                <AdminLayout />
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UsersAdmin />} />
+          <Route path="roles" element={<RolesAdmin />} />
+          <Route path="permissions" element={<PermissionsAdmin />} />
+          <Route path="cases" element={<CasesAdmin />} />
+          <Route path="complaints" element={<ComplaintsAdmin />} />
+          <Route path="rewards" element={<RewardsAdmin />} />
+          <Route path="*" element={<AdminDashboard />} />
+        </Route>
+
+        {/* Main app: uses AppLayout */}
+        <Route
+          path="/"
           element={
             <ProtectedRoute>
               <AppLayout />
             </ProtectedRoute>
           }
         >
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="profile" element={<ProfilePage />} />
 
           <Route
-            path="/cases"
+            path="cases"
             element={
               <RoleRoute
                 roles={[
@@ -89,15 +111,16 @@ function App() {
             }
           />
 
-          <Route path="/complaints" element={<ComplaintsPage />} />
-          <Route path="/complaints/new" element={<NewComplaintPage />} />
-          <Route path="/complaints/:id/edit" element={<EditComplaintPage />} />
+          <Route path="complaints" element={<ComplaintsPage />} />
+          <Route path="complaints/new" element={<NewComplaintPage />} />
+          <Route path="complaints/:id/edit" element={<EditComplaintPage />} />
 
           <Route
-            path="/evidence"
+            path="evidence"
             element={
               <RoleRoute
                 roles={[
+                  "System Administrator",
                   "Police Officer",
                   "Patrol Officer",
                   "Detective",
@@ -112,7 +135,7 @@ function App() {
           />
 
           <Route
-            path="/evidence-review"
+            path="evidence-review"
             element={
               <RoleRoute roles={["Coroner"]}>
                 <EvidenceReviewPage />
@@ -120,11 +143,11 @@ function App() {
             }
           />
 
-          <Route path="/rewards" element={<RewardsPage />} />
-          <Route path="/rewards/submit" element={<RewardSubmitPage />} />
+          <Route path="rewards" element={<RewardsPage />} />
+          <Route path="rewards/submit" element={<RewardSubmitPage />} />
 
           <Route
-            path="/detective-board"
+            path="detective-board"
             element={
               <RoleRoute roles={["Detective"]}>
                 <DetectiveBoardPage />
@@ -133,33 +156,22 @@ function App() {
           />
 
           <Route
-            path="/investigation/intensive-pursuit"
+            path="investigation/intensive-pursuit"
             element={<IntensivePursuitPage />}
           />
 
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/trials" element={<TrialsPage />} />
-          <Route path="/approvals" element={<ApprovalsPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="trials" element={<TrialsPage />} />
+          <Route path="approvals" element={<ApprovalsPage />} />
           <Route
-            path="/detective-reviews"
+            path="detective-reviews"
             element={
               <RoleRoute roles={["Sergeant"]}>
                 <DetectiveReviewsPage />
               </RoleRoute>
             }
           />
-          <Route path="/statistics" element={<StatisticsPage />} />
-
-          {/* Admin nested routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<UsersAdmin />} />
-            <Route path="roles" element={<RolesAdmin />} />
-            <Route path="permissions" element={<PermissionsAdmin />} />
-            <Route path="cases" element={<CasesAdmin />} />
-            <Route path="complaints" element={<ComplaintsAdmin />} />
-            <Route path="rewards" element={<RewardsAdmin />} />
-          </Route>
+          <Route path="statistics" element={<StatisticsPage />} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
