@@ -31,6 +31,8 @@ db.sqlite3
 *.swo
 *~
 .env
+.DS_Store
+
 
 # Frontend
 frontend/node_modules/
