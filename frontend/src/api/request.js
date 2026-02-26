@@ -5,10 +5,11 @@
  * Env:
  *   VITE_API_URL or API_BASE_URL — full base URL (e.g. http://127.0.0.1:8000/api/v1)
  */
-const BASE = (import.meta.env.VITE_API_URL || import.meta.env.API_BASE_URL || "").replace(
-  /\/$/,
-  "",
-);
+const BASE = (
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.API_BASE_URL ||
+  ""
+).replace(/\/$/, "");
 
 function getToken() {
   return localStorage.getItem("access_token") || "";
@@ -29,6 +30,21 @@ async function handleResponse(res) {
     json = text ? JSON.parse(text) : {};
   } catch {
     throw new Error(res.statusText || "Invalid response from server");
+  }
+
+  // If unauthorized, clear local tokens so the app can re-authenticate.
+  if (res.status === 401) {
+    try {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      // keep user info for debugging, but remove to force refresh if needed
+      localStorage.removeItem("user");
+    } catch {}
+    const err = new Error(
+      (json && (json.message || json.error)) || "Unauthorized",
+    );
+    err.status = 401;
+    throw err;
   }
 
   if (json && json.status === "success") {
@@ -78,7 +94,9 @@ function url(path) {
 }
 
 export function get(path) {
-  return fetch(url(path), { method: "GET", headers: headers() }).then(handleResponse);
+  return fetch(url(path), { method: "GET", headers: headers() }).then(
+    handleResponse,
+  );
 }
 
 export function post(path, body) {
@@ -106,7 +124,9 @@ export function patch(path, body) {
 }
 
 export function del(path) {
-  return fetch(url(path), { method: "DELETE", headers: headers() }).then(handleResponse);
+  return fetch(url(path), { method: "DELETE", headers: headers() }).then(
+    handleResponse,
+  );
 }
 
 export function getPublic(path) {

@@ -28,3 +28,7 @@ export function assignCaseDetective(caseId, detectiveId) {
     detective_id: detectiveId,
   });
 }
+
+export function approveCase(caseId, action, message = "") {
+  return post(`cases/${caseId}/approvals/`, { action, message });
+}

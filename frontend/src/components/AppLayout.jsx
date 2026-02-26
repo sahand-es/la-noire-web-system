@@ -38,7 +38,8 @@ function hasAnyRole(user, roles) {
 }
 
 function buildMenuItems(user) {
-  const isAdmin = Boolean(user?.is_superuser) || hasRole(user, "System Administrator");
+  const isAdmin =
+    Boolean(user?.is_superuser) || hasRole(user, "System Administrator");
 
   const items = [
     {
@@ -61,7 +62,9 @@ function buildMenuItems(user) {
     {
       key: "/investigation/intensive-pursuit",
       icon: <AimOutlined />,
-      label: <Link to="/investigation/intensive-pursuit">Intensive Pursuit</Link>,
+      label: (
+        <Link to="/investigation/intensive-pursuit">Intensive Pursuit</Link>
+      ),
     },
 
     {
@@ -148,7 +151,8 @@ function titleForPath(path) {
   if (path === "/dashboard") return "Dashboard";
   if (path === "/complaints") return "Complaints";
   if (path === "/complaints/new") return "New Complaint";
-  if (path.startsWith("/complaints/") && path.endsWith("/edit")) return "Edit Complaint";
+  if (path.startsWith("/complaints/") && path.endsWith("/edit"))
+    return "Edit Complaint";
   if (path === "/cases") return "Cases";
   if (path === "/evidence") return "Evidence";
   if (path === "/evidence-review") return "Evidence Review";
@@ -185,12 +189,16 @@ export function AppLayout() {
 
   const selectedKey = useMemo(() => {
     const path = location.pathname;
-    if (path.startsWith("/complaints/") && path !== "/complaints/new") return "/complaints";
+    if (path.startsWith("/complaints/") && path !== "/complaints/new")
+      return "/complaints";
     if (path.startsWith("/admin")) return "/admin";
     return path;
   }, [location.pathname]);
 
-  const pageTitle = useMemo(() => titleForPath(location.pathname), [location.pathname]);
+  const pageTitle = useMemo(
+    () => titleForPath(location.pathname),
+    [location.pathname],
+  );
 
   const showBack = useMemo(() => {
     const p = location.pathname;
@@ -208,7 +216,7 @@ export function AppLayout() {
           </div>
         ),
         icon: <UserOutlined />,
-        disabled: true,
+        onClick: () => navigate("/profile"),
       },
       { type: "divider" },
       {
@@ -226,7 +234,12 @@ export function AppLayout() {
 
   return (
     <Layout className="min-h-screen">
-      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed} width={260}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        width={260}
+      >
         <div className="px-4 py-4">
           <Link to="/dashboard" className="no-underline">
             <Text strong className="block">
@@ -245,7 +258,9 @@ export function AppLayout() {
         <Header className="flex items-center justify-between px-4">
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              {showBack ? <Button onClick={() => navigate(-1)}>Back</Button> : null}
+              {showBack ? (
+                <Button onClick={() => navigate(-1)}>Back</Button>
+              ) : null}
               <Breadcrumb
                 items={[
                   { title: <Link to="/dashboard">Dashboard</Link> },
@@ -259,7 +274,9 @@ export function AppLayout() {
           </div>
 
           <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
-            <Button icon={<UserOutlined />}>{user?.username || "Account"}</Button>
+            <Button icon={<UserOutlined />}>
+              {user?.username || "Account"}
+            </Button>
           </Dropdown>
         </Header>
 

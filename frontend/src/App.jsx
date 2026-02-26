@@ -3,6 +3,7 @@ import { Home } from "./HomePage/Home";
 import { Login } from "./Auth/Login";
 import { Register } from "./Auth/Register";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { GuestRoute, ProtectedRoute } from "./components/ProtectedRoute";
 
 import { AppLayout } from "./components/AppLayout";
@@ -41,7 +42,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/notifications" element={<NotificationsPage />} />
-        <Route 
+        <Route
           path="/login"
           element={
             <GuestRoute>
@@ -67,11 +68,22 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
 
-         <Route
+          <Route
             path="/cases"
             element={
-              <RoleRoute roles={["Cadet","Police Officer","Patrol Officer","Detective","Sergeant","Captain","Police Chief"]}>
+              <RoleRoute
+                roles={[
+                  "Cadet",
+                  "Police Officer",
+                  "Patrol Officer",
+                  "Detective",
+                  "Sergeant",
+                  "Captain",
+                  "Police Chief",
+                ]}
+              >
                 <CasesPage />
               </RoleRoute>
             }
@@ -84,13 +96,21 @@ function App() {
           <Route
             path="/evidence"
             element={
-              <RoleRoute roles={["Police Officer","Patrol Officer","Detective","Sergeant","Captain","Police Chief"]}>
+              <RoleRoute
+                roles={[
+                  "Police Officer",
+                  "Patrol Officer",
+                  "Detective",
+                  "Sergeant",
+                  "Captain",
+                  "Police Chief",
+                ]}
+              >
                 <EvidencePage />
               </RoleRoute>
             }
           />
 
-          
           <Route
             path="/evidence-review"
             element={
@@ -110,10 +130,12 @@ function App() {
                 <DetectiveBoardPage />
               </RoleRoute>
             }
-          />    
+          />
 
-          
-          <Route path="/investigation/intensive-pursuit" element={<IntensivePursuitPage />} />
+          <Route
+            path="/investigation/intensive-pursuit"
+            element={<IntensivePursuitPage />}
+          />
 
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/trials" element={<TrialsPage />} />

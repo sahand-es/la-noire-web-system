@@ -46,16 +46,20 @@ export function EvidenceReviewPage() {
   const [decision, setDecision] = useState("approve");
   const [followUpResult, setFollowUpResult] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
 
   async function fetchData(nextPage = page, nextPageSize = pageSize) {
     setIsLoading(true);
     try {
-      const data = await listCoronerQueue({ page: nextPage, pageSize: nextPageSize });
+      const data = await listCoronerQueue({
+        page: nextPage,
+        pageSize: nextPageSize,
+      });
       const normalized = normalizeResponse(data);
       setRows(normalized.rows);
       setTotal(normalized.total);
     } catch (err) {
-      message.error(err.message || "Failed to load coroner queue.");
+      messageApi.error(err.message || "Failed to load coroner queue.");
       setRows([]);
       setTotal(0);
     } finally {
@@ -73,18 +77,21 @@ export function EvidenceReviewPage() {
 
     setIsSubmitting(true);
     try {
-      await submitCoronerDecision(selected.id, {
-        action: decision, // approve | reject
-        follow_up_result: followUpResult.trim(),
-      });
-      message.success("Decision submitted.");
+      await submitCoronerDecision(
+        { case: selected.case, id: selected.id },
+        {
+          approved: decision === "approve",
+          follow_up_result: followUpResult.trim(),
+        },
+      );
+      messageApi.success("Decision submitted.");
       setIsModalOpen(false);
       setSelected(null);
       setDecision("approve");
       setFollowUpResult("");
       fetchData(page, pageSize);
     } catch (err) {
-      message.error(err.message || "Failed to submit decision.");
+      messageApi.error(err.message || "Failed to submit decision.");
     } finally {
       setIsSubmitting(false);
     }
@@ -98,7 +105,12 @@ export function EvidenceReviewPage() {
         width: 180,
         render: (_, r) => r.case_number || r.case || "-",
       },
-      { title: "Title", dataIndex: "title", key: "title", render: (v) => v || "-" },
+      {
+        title: "Title",
+        dataIndex: "title",
+        key: "title",
+        render: (v) => v || "-",
+      },
       {
         title: "Status",
         dataIndex: "status",
@@ -136,6 +148,7 @@ export function EvidenceReviewPage() {
 
   return (
     <div className="min-h-screen">
+      {contextHolder}
       <div className="max-w-6xl mx-auto flex flex-col gap-4">
         <Card>
           <PageHeader
@@ -143,7 +156,10 @@ export function EvidenceReviewPage() {
             subtitle="Coroner: review biological evidence and submit a decision."
             actions={
               <Space>
-                <Button onClick={() => fetchData(page, pageSize)} disabled={isLoading}>
+                <Button
+                  onClick={() => fetchData(page, pageSize)}
+                  disabled={isLoading}
+                >
                   Refresh
                 </Button>
               </Space>
@@ -192,10 +208,18 @@ export function EvidenceReviewPage() {
                 <Descriptions.Item label="Case">
                   {selected.case_number || selected.case || "-"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Title">{selected.title || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Description">{selected.description || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Status">{selected.status || "-"}</Descriptions.Item>
-                <Descriptions.Item label="Recorded">{formatDate(selected.created_at)}</Descriptions.Item>
+                <Descriptions.Item label="Title">
+                  {selected.title || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Description">
+                  {selected.description || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Status">
+                  {selected.status || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Recorded">
+                  {formatDate(selected.created_at)}
+                </Descriptions.Item>
               </Descriptions>
 
               <div className="flex items-center gap-2 flex-wrap">
