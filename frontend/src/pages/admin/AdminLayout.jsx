@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
-import { Layout, Menu, Typography, Button } from "antd";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Layout, Menu, Typography, Button, Dropdown, Breadcrumb } from "antd";
+import { Navbar } from "../../components/Navbar";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   UserOutlined,
   FolderOpenOutlined,
   TrophyOutlined,
-  LogoutOutlined,
   DashboardOutlined,
-  LeftOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 
-const { Header, Sider, Content } = Layout;
+const { Sider, Content } = Layout;
 const { Title } = Typography;
 
 const ADMIN_MENU_ITEMS = [
@@ -53,11 +55,27 @@ function getOpenKeyForPath(pathname) {
   return [];
 }
 
+function adminTitleForPath(pathname) {
+  if (pathname === "/admin") return "Dashboard";
+  if (pathname.startsWith("/admin/users")) return "Users";
+  if (pathname.startsWith("/admin/roles")) return "Roles";
+  if (pathname.startsWith("/admin/permissions")) return "Permissions";
+  if (pathname.startsWith("/admin/cases")) return "Cases";
+  if (pathname.startsWith("/admin/complaints")) return "Complaints";
+  if (pathname.startsWith("/admin/rewards")) return "Rewards";
+  return "Admin";
+}
+
 export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const adminPageTitle = adminTitleForPath(location.pathname);
+  const isOnAdminDashboard = location.pathname === "/admin";
+  const adminHomeNavConfig = isOnAdminDashboard
+    ? { icon: <AppstoreOutlined />, to: "/dashboard", label: "Back to app" }
+    : { icon: <HomeOutlined />, to: "/admin", label: "Admin dashboard" };
 
   useEffect(() => {
     setOpenKeys((prev) => {
@@ -66,13 +84,6 @@ export function AdminLayout() {
       return merged.length ? merged : prev;
     });
   }, [location.pathname]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
 
   return (
     <Layout className="h-screen overflow-hidden flex">
@@ -99,23 +110,48 @@ export function AdminLayout() {
         />
       </Sider>
       <Layout className="flex-1 flex flex-col min-h-0">
-        <Header className="flex justify-between items-center px-6 shrink-0">
-          <Button
-            type="text"
-            icon={<LeftOutlined />}
-            onClick={() => navigate("/dashboard")}
-          >
-            Back to app
-          </Button>
-          <Button
-            type="primary"
-            danger
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </Header>
+        <Navbar
+          start={
+            <>
+              <Button
+                type="text"
+                icon={adminHomeNavConfig.icon}
+                onClick={() => navigate(adminHomeNavConfig.to)}
+                className="shrink-0 transition-all duration-200 hover:opacity-80 active:opacity-70 p-1"
+                aria-label={adminHomeNavConfig.label}
+              />
+              <Breadcrumb
+                items={[
+                  { title: <Link to="/admin">Admin</Link> },
+                  { title: adminPageTitle },
+                ]}
+              />
+            </>
+          }
+          end={
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "logout",
+                    label: "Logout",
+                    icon: <LogoutOutlined />,
+                    onClick: () => {
+                      localStorage.removeItem("access_token");
+                      localStorage.removeItem("refresh_token");
+                      localStorage.removeItem("user");
+                      navigate("/login");
+                    },
+                  },
+                ],
+              }}
+              placement="bottomRight"
+              trigger={["click"]}
+            >
+              <Button icon={<UserOutlined />}>Account</Button>
+            </Dropdown>
+          }
+        />
         <Content className="p-6 overflow-auto flex-1 min-h-0">
           <Outlet />
         </Content>

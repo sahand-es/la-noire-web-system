@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Layout, Menu, Button, Typography, Dropdown, Breadcrumb } from "antd";
+import { Navbar } from "./Navbar";
 import {
   AppstoreOutlined,
   FileTextOutlined,
@@ -13,11 +14,13 @@ import {
   LogoutOutlined,
   UserOutlined,
   BellOutlined,
+  HomeOutlined,
+  BankOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
-const { Header, Sider, Content } = Layout;
-const { Text, Title } = Typography;
+const { Sider, Content } = Layout;
+const { Text } = Typography;
 
 function readUser() {
   const raw = localStorage.getItem("user");
@@ -200,10 +203,10 @@ export function AppLayout() {
     [location.pathname],
   );
 
-  const showBack = useMemo(() => {
-    const p = location.pathname;
-    return p !== "/dashboard";
-  }, [location.pathname]);
+  const isOnDashboard = location.pathname === "/dashboard";
+  const homeNavConfig = isOnDashboard
+    ? { icon: <BankOutlined />, to: "/", label: "Public home" }
+    : { icon: <HomeOutlined />, to: "/dashboard", label: "Dashboard" };
 
   const userMenu = {
     items: [
@@ -256,30 +259,32 @@ export function AppLayout() {
       </Sider>
 
       <Layout className="flex-1 flex flex-col min-h-0">
-        <Header className="flex items-center justify-between px-4 shrink-0">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              {showBack ? (
-                <Button onClick={() => navigate(-1)}>Back</Button>
-              ) : null}
+        <Navbar
+          start={
+            <>
+              <Button
+                type="text"
+                icon={homeNavConfig.icon}
+                onClick={() => navigate(homeNavConfig.to)}
+                className="shrink-0 transition-all duration-200 hover:opacity-80 active:opacity-70 p-1"
+                aria-label={homeNavConfig.label}
+              />
               <Breadcrumb
                 items={[
                   { title: <Link to="/dashboard">Dashboard</Link> },
                   { title: pageTitle },
                 ]}
               />
-            </div>
-            <Title level={5} className="m-0">
-              {pageTitle}
-            </Title>
-          </div>
-
-          <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
-            <Button icon={<UserOutlined />}>
-              {user?.username || "Account"}
-            </Button>
-          </Dropdown>
-        </Header>
+            </>
+          }
+          end={
+            <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
+              <Button icon={<UserOutlined />}>
+                {user?.username || "Account"}
+              </Button>
+            </Dropdown>
+          }
+        />
 
         <Content className="p-6 overflow-auto flex-1 min-h-0">
           <Outlet />

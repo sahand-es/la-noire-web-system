@@ -31,6 +31,7 @@ export const antdTheme = {
     Layout: {
       siderBg,
       headerBg,
+      headerPadding: "0 24px 0 8px",
       headerColor: deskLightTokens.colorText,
       triggerBg: siderBg,
       triggerColor: deskLightTokens.colorTextSecondary,
