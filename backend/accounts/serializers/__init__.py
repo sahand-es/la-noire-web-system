@@ -1,6 +1,8 @@
 from .user import (
     RoleSerializer,
     RoleCreateUpdateSerializer,
+    ActionPermissionSerializer,
+    ActionPermissionCreateUpdateSerializer,
     UserRegistrationSerializer,
     UserLoginSerializer,
     UserProfileSerializer,
@@ -13,6 +15,8 @@ from .user import (
 __all__ = [
     'RoleSerializer',
     'RoleCreateUpdateSerializer',
+    'ActionPermissionSerializer',
+    'ActionPermissionCreateUpdateSerializer',
     'UserRegistrationSerializer',
     'UserLoginSerializer',
     'UserProfileSerializer',

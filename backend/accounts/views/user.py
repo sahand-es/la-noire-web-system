@@ -7,7 +7,7 @@ from django.contrib.auth import login, logout
 from drf_spectacular.utils import extend_schema, OpenApiExample
 
 from core.models import UserProfile
-from accounts.models import Role
+from accounts.models import Role, ActionPermission
 from accounts.serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,
@@ -18,6 +18,8 @@ from accounts.serializers import (
     UserUpdateSerializer,
     RoleSerializer,
     RoleCreateUpdateSerializer,
+    ActionPermissionSerializer,
+    ActionPermissionCreateUpdateSerializer,
 )
 from accounts.permissions import IsSystemAdmin
 
@@ -258,6 +260,21 @@ class RoleViewSet(viewsets.ModelViewSet):
     @extend_schema(responses={204: None}, description='Delete a role')
     def destroy(self, request, *args, **kwargs):
         return super().destroy(request, *args, **kwargs)
+
+
+class ActionPermissionViewSet(viewsets.ModelViewSet):
+    """
+    Action Permission CRUD ViewSet
+
+    List, create, update, delete action permissions and assign roles (requires System Administrator).
+    """
+    queryset = ActionPermission.objects.all().prefetch_related('roles').order_by('codename')
+    permission_classes = [permissions.IsAuthenticated, IsSystemAdmin]
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ActionPermissionCreateUpdateSerializer
+        return ActionPermissionSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):

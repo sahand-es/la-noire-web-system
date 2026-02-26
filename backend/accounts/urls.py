@@ -9,6 +9,7 @@ from accounts.views import (
     UserProfileView,
     ChangePasswordView,
     RoleViewSet,
+    ActionPermissionViewSet,
     UserViewSet,
 )
 
@@ -16,6 +17,7 @@ app_name = 'accounts'
 
 router = DefaultRouter()
 router.register(r'roles', RoleViewSet, basename='role')
+router.register(r'permissions', ActionPermissionViewSet, basename='permission')
 router.register(r'users', UserViewSet, basename='user')
 
 urlpatterns = [

@@ -42,6 +42,27 @@ export function getRole(id) {
   return get(`roles/${id}/`);
 }
 
+// --- Permissions ---
+export function listPermissions() {
+  return get("permissions/");
+}
+
+export function getPermission(id) {
+  return get(`permissions/${id}/`);
+}
+
+export function createPermission(data) {
+  return post("permissions/", data);
+}
+
+export function updatePermission(id, data) {
+  return put(`permissions/${id}/`, data);
+}
+
+export function deletePermission(id) {
+  return del(`permissions/${id}/`);
+}
+
 // --- Users ---
 export function listUsers() {
   return get("users/");
