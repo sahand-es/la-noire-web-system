@@ -233,8 +233,9 @@ export function AppLayout() {
   };
 
   return (
-    <Layout className="min-h-screen">
+    <Layout className="h-screen overflow-hidden flex">
       <Sider
+        theme="light"
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
@@ -251,11 +252,11 @@ export function AppLayout() {
           </Link>
         </div>
 
-        <Menu mode="inline" selectedKeys={[selectedKey]} items={menuItems} />
+        <Menu theme="light" mode="inline" selectedKeys={[selectedKey]} items={menuItems} />
       </Sider>
 
-      <Layout>
-        <Header className="flex items-center justify-between px-4">
+      <Layout className="flex-1 flex flex-col min-h-0">
+        <Header className="flex items-center justify-between px-4 shrink-0">
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               {showBack ? (
@@ -280,7 +281,7 @@ export function AppLayout() {
           </Dropdown>
         </Header>
 
-        <Content className="p-6">
+        <Content className="p-6 overflow-auto flex-1 min-h-0">
           <Outlet />
         </Content>
       </Layout>

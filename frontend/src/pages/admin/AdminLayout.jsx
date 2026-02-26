@@ -77,17 +77,19 @@ export function AdminLayout() {
   return (
     <Layout className="h-screen overflow-hidden flex">
       <Sider
+        theme="light"
         collapsible
         collapsed={collapsed}
         onCollapse={setCollapsed}
         width={250}
       >
         <div className="p-4 flex items-center justify-center">
-          <Title level={4} className="m-0 text-white">
+          <Title level={4} className="m-0">
             {collapsed ? "LA" : "LA Noire Admin"}
           </Title>
         </div>
         <Menu
+          theme="light"
           mode="inline"
           selectedKeys={[location.pathname]}
           openKeys={openKeys}
