@@ -1,15 +1,13 @@
+import { getApiBase } from "../config";
+
 /**
  * Single module for all HTTP requests. Use only this module (or api helpers) for backend calls.
  * Backend returns { status: 'success', data? } or { status: 'error', message? }.
  *
- * Env:
- *   VITE_API_URL or API_BASE_URL — full base URL (e.g. http://127.0.0.1:8000/api/v1)
+ * Config (runtime or build-time):
+ *   apiUrl from window.__RUNTIME_CONFIG__ (Docker) or VITE_API_URL / API_BASE_URL (dev)
  */
-const BASE = (
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.API_BASE_URL ||
-  ""
-).replace(/\/$/, "");
+const BASE = getApiBase();
 
 function getToken() {
   return localStorage.getItem("access_token") || "";

@@ -8,13 +8,12 @@ RUN npm ci
 
 COPY . .
 
-ARG VITE_API_URL=http://localhost:8000/api/v1
-ENV VITE_API_URL=$VITE_API_URL
-
 RUN npm run build
 
 # Serve stage
 FROM hub.hamdocker.ir/nginx:alpine
+
+ENV VITE_API_URL=http://localhost:8000/api/v1
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
@@ -29,4 +28,4 @@ RUN echo 'server { \
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "API_URL=\"${VITE_API_URL:-http://localhost:8000/api/v1}\"; echo \"window.__RUNTIME_CONFIG__ = {\\\"apiUrl\\\":\\\"\"$API_URL\"\\\"};\" > /usr/share/nginx/html/config.js && exec nginx -g 'daemon off;'"]
