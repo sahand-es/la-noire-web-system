@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AdminTableView } from "../../components/admin/AdminTableView";
-import { Tag } from "antd";
+import { Space, Tag } from "antd";
 import {
   listPermissions,
   createPermission,
@@ -36,11 +36,11 @@ const columns = [
     dataIndex: "roles",
     key: "roles",
     render: (roles) => (
-      <>
+      <Space size="small" wrap>
         {roles?.map((role) => (
           <Tag key={role.id}>{role.name}</Tag>
         ))}
-      </>
+      </Space>
     ),
   },
 ];
