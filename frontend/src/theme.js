@@ -18,6 +18,7 @@ export const deskLightTokens = {
   colorBgLayout: '#EDE4D8',
   colorBgElevated: '#E8DED2',
   borderRadius: 4,
+  borderRadiusLG: 12,
   boxShadow: '0 2px 8px rgba(44, 37, 32, 0.08)',
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 }
@@ -90,6 +91,9 @@ export const antdTheme = {
       itemSelectedBg: 'rgba(245, 237, 228, 0.12)',
       subMenuItemBg: 'transparent',
       subMenuItemColor: siderTextSecondary,
+    },
+    Card: {
+      colorBorderSecondary: deskLightTokens.colorBorder,
     },
   },
 }

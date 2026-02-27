@@ -142,7 +142,7 @@ export function AppLayout() {
 
         <div
           className="flex-1 min-h-0 overflow-hidden rounded-tl-xl rounded-tr-xl min-w-0 mx-3"
-          style={{ background: deskLightTokens.colorBgContainer }}
+          style={{ background: deskLightTokens.colorBgLayout }}
         >
           <div className="p-6 h-full overflow-auto">
             <Outlet />
