@@ -12,6 +12,7 @@ import {
   Tag,
 } from "antd";
 import { PageHeader } from "../components/PageHeader";
+import { deskLightTokens } from "../theme";
 import { listCases } from "../api/cases";
 import {
   listWitnessTestimonies,
@@ -28,8 +29,26 @@ import {
 } from "../api/detectiveBoard";
 import { createDetectiveReport } from "../api/detectiveBoard";
 import { listNotifications } from "../api/notifications";
+import {
+  UserOutlined,
+  ExperimentOutlined,
+  CarOutlined,
+  FileTextOutlined,
+  InboxOutlined,
+  SearchOutlined,
+  LinkOutlined,
+  CloseOutlined,
+} from "@ant-design/icons";
 
 const { Text } = Typography;
+
+const EVIDENCE_ICONS = {
+  witnesstestimony: UserOutlined,
+  biologicalevidence: ExperimentOutlined,
+  vehicleevidence: CarOutlined,
+  documentevidence: FileTextOutlined,
+  otherevidence: InboxOutlined,
+};
 
 function normalizeList(res) {
   if (Array.isArray(res)) return res;
@@ -65,24 +84,18 @@ function evidenceLabel(e) {
 
 function getEvidenceColor(modelName) {
   const colors = {
-    witnesstestimony: "blue",
-    biologicalevidence: "magenta",
-    vehicleevidence: "cyan",
-    documentevidence: "gold",
-    otherevidence: "purple",
+    witnesstestimony: deskLightTokens.colorPrimary,
+    biologicalevidence: deskLightTokens.colorSuccess,
+    vehicleevidence: deskLightTokens.colorInfo,
+    documentevidence: deskLightTokens.colorWarning,
+    otherevidence: deskLightTokens.colorText,
   };
   return colors[modelName] || "default";
 }
 
 function getEvidenceIcon(modelName) {
-  const icons = {
-    witnesstestimony: "👤",
-    biologicalevidence: "🧬",
-    vehicleevidence: "🚗",
-    documentevidence: "📄",
-    otherevidence: "📦",
-  };
-  return icons[modelName] || "🔍";
+  const Icon = EVIDENCE_ICONS[modelName] || SearchOutlined;
+  return <Icon />;
 }
 
 export function DetectiveBoardPage() {
@@ -356,7 +369,7 @@ export function DetectiveBoardPage() {
         <Card>
           <PageHeader
             title="Detective Board"
-            subtitle="Drag evidence cards and connect related items with red lines."
+            subtitle="Drag evidence cards and connect related items with links."
             actions={
               <Space>
                 <Button
@@ -413,18 +426,33 @@ export function DetectiveBoardPage() {
               <Spin />
             </div>
           ) : (
-            <div
-              ref={boardRef}
-              className="relative w-full"
-              style={{
-                height: 650,
-                background: "linear-gradient(135deg, #f5f5dc 0%, #e8dcc4 100%)",
-              }}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-            >
-              <svg className="absolute inset-0 w-full h-full pointer-events-none">
+            <div className="flex flex-col gap-4">
+              <div
+                className="p-4 rounded-xl"
+                style={{
+                  background: deskLightTokens.colorPrimary,
+                  boxShadow: "inset 0 0 0 3px rgba(0,0,0,0.1), 0 4px 12px rgba(44, 37, 32, 0.2)",
+                }}
+              >
+                <div
+                  ref={boardRef}
+                  className="relative w-full rounded-lg overflow-hidden"
+                  style={{
+                    height: 650,
+                    background: `
+                      linear-gradient(90deg, ${deskLightTokens.colorBorder}22 1px, transparent 1px),
+                      linear-gradient(${deskLightTokens.colorBorder}22 1px, transparent 1px),
+                      linear-gradient(135deg, ${deskLightTokens.colorBgLayout} 0%, ${deskLightTokens.colorBgElevated} 50%, ${deskLightTokens.colorBorder} 100%)
+                    `,
+                    backgroundSize: "40px 40px, 40px 40px, 100% 100%",
+                    boxShadow: "inset 0 2px 8px rgba(0,0,0,0.06)",
+                    border: `2px solid ${deskLightTokens.colorBorder}`,
+                  }}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                >
+                <svg className="absolute inset-0 w-full h-full pointer-events-none">
                 {lines.map((l) => (
                   <g key={l.id}>
                     <line
@@ -432,7 +460,7 @@ export function DetectiveBoardPage() {
                       y1={l.ay}
                       x2={l.bx}
                       y2={l.by}
-                      stroke="crimson"
+                      stroke={deskLightTokens.colorPrimary}
                       strokeWidth="2"
                       strokeDasharray="5,5"
                       opacity="0.6"
@@ -442,9 +470,9 @@ export function DetectiveBoardPage() {
                       y1={l.ay}
                       x2={l.bx}
                       y2={l.by}
-                      stroke="crimson"
+                      stroke={deskLightTokens.colorPrimary}
                       strokeWidth="6"
-                      opacity="0.1"
+                      opacity="0.15"
                     />
                   </g>
                 ))}
@@ -453,8 +481,9 @@ export function DetectiveBoardPage() {
               {cards.map((c) => (
                 <div
                   key={c.key}
-                  className="absolute"
+                  className="absolute cursor-move select-none"
                   style={{ left: c.x || 0, top: c.y || 0, width: 240 }}
+                  onMouseDown={(e) => handleMouseDown(e, c)}
                 >
                   <Card
                     size="small"
@@ -472,6 +501,7 @@ export function DetectiveBoardPage() {
                         <Button
                           size="small"
                           danger={selectedSuspects.includes(c.key)}
+                          onMouseDown={(e) => e.stopPropagation()}
                           onClick={() => {
                             setSelectedSuspects((prev) =>
                               prev.includes(c.key)
@@ -487,59 +517,72 @@ export function DetectiveBoardPage() {
                       </div>
                     }
                   >
-                    <div
-                      className="cursor-move select-none"
-                      onMouseDown={(e) => handleMouseDown(e, c)}
-                    >
-                      <div className="mb-2">
-                        <Tag color={getEvidenceColor(c.model)}>
-                          {c.model.replace(/evidence$/, "")}
-                        </Tag>
-                      </div>
-                      <div className="text-sm">{c.raw?.description || "-"}</div>
+                    <div className="mb-2">
+                      <Tag color={getEvidenceColor(c.model)}>
+                        {c.model.replace(/evidence$/, "")}
+                      </Tag>
                     </div>
+                    <div className="text-sm">{c.raw?.description || "-"}</div>
                   </Card>
                 </div>
               ))}
 
-              {links.length ? (
-                <div className="absolute bottom-3 left-3 max-w-sm">
-                  <Card
-                    size="small"
-                    title={<Text strong>🔗 Evidence Links</Text>}
-                  >
-                    <div className="flex flex-col gap-2">
-                      {links.map((l) => (
-                        <div
-                          key={l.id}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <div className="flex items-center gap-1 flex-1 min-w-0">
-                            <Tag
-                              color={getEvidenceColor(l.from_content_type_name)}
-                            >
-                              {l.from_object_id}
-                            </Tag>
-                            <span>→</span>
-                            <Tag
-                              color={getEvidenceColor(l.to_content_type_name)}
-                            >
-                              {l.to_object_id}
-                            </Tag>
-                          </div>
-                          <Button
-                            size="small"
-                            danger
-                            onClick={() => onDeleteLink(l.id)}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
                 </div>
-              ) : null}
+              </div>
+
+              <div
+                className="rounded-lg border px-4 py-3"
+                style={{
+                  borderColor: deskLightTokens.colorBorder,
+                  backgroundColor: deskLightTokens.colorBgLayout,
+                }}
+              >
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <span className="flex items-center gap-2 text-sm font-medium" style={{ color: deskLightTokens.colorText }}>
+                    <LinkOutlined />
+                    Evidence Links
+                  </span>
+                  {links.length > 0 && (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {links.length} connection{links.length !== 1 ? "s" : ""}
+                    </Text>
+                  )}
+                </div>
+                {links.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {links.map((l) => (
+                      <div
+                        key={l.id}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded border"
+                        style={{
+                          borderColor: deskLightTokens.colorBorder,
+                          backgroundColor: deskLightTokens.colorBgContainer,
+                        }}
+                      >
+                        <Tag color={getEvidenceColor(l.from_content_type_name)} className="m-0">
+                          #{l.from_object_id}
+                        </Tag>
+                        <span style={{ color: deskLightTokens.colorTextTertiary, fontSize: 12 }}>→</span>
+                        <Tag color={getEvidenceColor(l.to_content_type_name)} className="m-0">
+                          #{l.to_object_id}
+                        </Tag>
+                        <Button
+                          size="small"
+                          type="text"
+                          danger
+                          icon={<CloseOutlined />}
+                          onClick={() => onDeleteLink(l.id)}
+                          className="shrink-0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    No links yet. Use Add link to connect evidence.
+                  </Text>
+                )}
+              </div>
             </div>
           )}
         </Card>
