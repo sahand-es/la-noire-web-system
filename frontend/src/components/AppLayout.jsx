@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
+import { ConfigProvider, Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
 import { Navbar } from "./Navbar";
 import { AppSider } from "./AppSider";
 import { NotificationAlertPoller } from "./NotificationAlertPoller";
@@ -10,7 +10,7 @@ import {
   BankOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { deskLightTokens } from "../theme";
+import { deskLightTokens, antdTheme } from "../theme";
 
 const { Text } = Typography;
 
@@ -128,7 +128,14 @@ export function AppLayout() {
             </>
           }
           end={
-            <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
+            <Dropdown
+              menu={userMenu}
+              placement="bottomRight"
+              trigger={["click"]}
+              dropdownRender={(node) => (
+                <ConfigProvider theme={antdTheme}>{node}</ConfigProvider>
+              )}
+            >
               <Button
                 type="text"
                 icon={<UserOutlined />}

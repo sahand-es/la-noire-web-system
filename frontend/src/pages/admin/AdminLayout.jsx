@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
+import { ConfigProvider, Layout, Button, Typography, Dropdown, Breadcrumb } from "antd";
 import { Navbar } from "../../components/Navbar";
 import { AppSider } from "../../components/AppSider";
 import { NotificationAlertPoller } from "../../components/NotificationAlertPoller";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { deskLightTokens } from "../../theme";
+import { deskLightTokens, antdTheme } from "../../theme";
 import {
   UserOutlined,
   HomeOutlined,
@@ -110,7 +110,14 @@ export function AdminLayout() {
             </>
           }
           end={
-            <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
+            <Dropdown
+              menu={userMenu}
+              placement="bottomRight"
+              trigger={["click"]}
+              dropdownRender={(node) => (
+                <ConfigProvider theme={antdTheme}>{node}</ConfigProvider>
+              )}
+            >
               <Button
                 type="text"
                 icon={<UserOutlined />}
