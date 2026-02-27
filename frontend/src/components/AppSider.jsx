@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Layout, Menu, Typography } from "antd";
+import { siderTextColor, siderTextSecondary } from "../theme";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AppstoreOutlined,
@@ -16,6 +17,7 @@ import {
   UserOutlined,
   BellOutlined,
   DashboardOutlined,
+  FileDoneOutlined,
 } from "@ant-design/icons";
 
 const { Sider } = Layout;
@@ -65,7 +67,7 @@ function buildAppMenuItems(user) {
   }
 
   if (hasRole(user, "Coroner")) {
-    items.push({ key: "/evidence-review", icon: <SafetyOutlined />, label: <Link to="/evidence-review">Evidence Review</Link> });
+    items.push({ key: "/evidence-review", icon: <FileDoneOutlined />, label: <Link to="/evidence-review">Evidence Review</Link> });
   }
 
   if (hasRole(user, "Detective")) {
@@ -180,24 +182,24 @@ export function AppSider({ variant, collapsed, onCollapse }) {
 
   return (
     <Sider
-      theme="light"
+      theme="dark"
       collapsible
       collapsed={collapsed}
       onCollapse={onCollapse}
       width={SIDER_WIDTH}
     >
-      <div className="p-4 overflow-hidden">
+      <div className="p-4 overflow-hidden" style={{ color: siderTextColor }}>
         {collapsed ? (
           <div className="flex justify-center font-semibold text-lg">L.A.</div>
         ) : (
-          <Link to={titleLink} className="no-underline block">
-            <Text strong className="block">L.A. Noire System</Text>
-            <Text type="secondary" className="block text-sm">{subtitle}</Text>
+          <Link to={titleLink} className="no-underline block" style={{ color: "inherit" }}>
+            <Text strong className="block" style={{ color: "inherit" }}>L.A. Noire System</Text>
+            <Text className="block text-sm" style={{ color: siderTextSecondary }}>{subtitle}</Text>
           </Link>
         )}
       </div>
       <Menu
-        theme="light"
+        theme="dark"
         mode="inline"
         selectedKeys={selectedKeys}
         openKeys={variant === "admin" ? openKeys : undefined}

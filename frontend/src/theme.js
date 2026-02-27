@@ -22,8 +22,43 @@ export const deskLightTokens = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
 }
 
-const siderBg = '#CFC4B4'
-const headerBg = '#D8CEC0'
+// const siderBg = '#CFC4B4'
+// const headerBg = '#D8CEC0'
+
+const siderBg = deskLightTokens.colorText
+const headerBg = deskLightTokens.colorText
+export const siderTextColor = deskLightTokens.colorBgLayout
+export const siderTextSecondary = deskLightTokens.colorBorder
+
+/** Theme override for header/navbar content (light text on dark bg). Use via ConfigProvider. */
+export const headerContentTheme = {
+  token: {
+    colorText: siderTextColor,
+    colorTextSecondary: siderTextSecondary,
+    colorLink: siderTextColor,
+    colorPrimary: siderTextColor,
+    colorPrimaryHover: deskLightTokens.colorBgContainer,
+  },
+  components: {
+    Button: {
+      defaultColor: siderTextColor,
+      defaultBg: 'transparent',
+      defaultBorderColor: 'transparent',
+      defaultHoverBg: 'rgba(245, 237, 228, 0.08)',
+      defaultHoverColor: deskLightTokens.colorBgContainer,
+      defaultHoverBorderColor: 'transparent',
+      textTextColor: siderTextColor,
+      textHoverBg: 'rgba(245, 237, 228, 0.08)',
+    },
+    Breadcrumb: {
+      itemColor: siderTextColor,
+      lastItemColor: siderTextColor,
+      linkColor: siderTextColor,
+      linkHoverColor: deskLightTokens.colorBgContainer,
+      separatorColor: siderTextSecondary,
+    },
+  },
+}
 
 export const antdTheme = {
   token: deskLightTokens,
@@ -32,21 +67,29 @@ export const antdTheme = {
       siderBg,
       headerBg,
       headerPadding: "0 24px 0 8px",
-      headerColor: deskLightTokens.colorText,
+      headerColor: siderTextColor,
       triggerBg: siderBg,
-      triggerColor: deskLightTokens.colorTextSecondary,
+      triggerColor: siderTextSecondary,
       lightSiderBg: siderBg,
       lightTriggerBg: siderBg,
-      lightTriggerColor: deskLightTokens.colorTextSecondary,
-      bodyBg: deskLightTokens.colorBgLayout,
+      lightTriggerColor: siderTextSecondary,
+      bodyBg: siderBg,
     },
     Menu: {
-      itemColor: deskLightTokens.colorText,
-      itemSelectedColor: deskLightTokens.colorPrimary,
-      itemHoverColor: deskLightTokens.colorText,
+      darkItemColor: siderTextColor,
+      darkItemSelectedColor: deskLightTokens.colorBgLayout,
+      darkItemHoverColor: siderTextColor,
+      darkSubMenuItemColor: siderTextSecondary,
+      darkItemBg: 'transparent',
+      darkItemSelectedBg: 'rgba(245, 237, 228, 0.12)',
+      darkItemHoverBg: 'rgba(245, 237, 228, 0.06)',
+      itemColor: siderTextColor,
+      itemSelectedColor: deskLightTokens.colorBgLayout,
+      itemHoverColor: siderTextColor,
       itemBg: 'transparent',
-      itemSelectedBg: 'rgba(92, 74, 61, 0.08)',
-      subMenuItemBg: 'rgba(232, 222, 210, 0.5)',
+      itemSelectedBg: 'rgba(245, 237, 228, 0.12)',
+      subMenuItemBg: 'transparent',
+      subMenuItemColor: siderTextSecondary,
     },
   },
 }

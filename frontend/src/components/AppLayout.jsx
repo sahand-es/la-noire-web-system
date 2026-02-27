@@ -10,8 +10,8 @@ import {
   BankOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { deskLightTokens } from "../theme";
 
-const { Content } = Layout;
 const { Text } = Typography;
 
 function readUser() {
@@ -108,7 +108,7 @@ export function AppLayout() {
         onCollapse={setCollapsed}
       />
 
-      <Layout className="flex-1 flex flex-col min-h-0">
+      <Layout className="flex-1 flex flex-col min-h-0 gap-3">
         <Navbar
           start={
             <>
@@ -129,16 +129,25 @@ export function AppLayout() {
           }
           end={
             <Dropdown menu={userMenu} placement="bottomRight" trigger={["click"]}>
-              <Button icon={<UserOutlined />}>
+              <Button
+                type="text"
+                icon={<UserOutlined />}
+                className="text-inherit hover:opacity-90 active:opacity-80"
+              >
                 {user?.username || "Account"}
               </Button>
             </Dropdown>
           }
         />
 
-        <Content className="p-6 overflow-auto flex-1 min-h-0">
-          <Outlet />
-        </Content>
+        <div
+          className="flex-1 min-h-0 overflow-hidden rounded-tl-xl rounded-tr-xl min-w-0 mx-3"
+          style={{ background: deskLightTokens.colorBgContainer }}
+        >
+          <div className="p-6 h-full overflow-auto">
+            <Outlet />
+          </div>
+        </div>
       </Layout>
     </Layout>
   );
