@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, Form, Input, Button, Typography, Alert } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import { register } from "../api/calls";
+import { siderBg } from "../theme";
 
 const { Title, Text } = Typography;
 
@@ -46,7 +47,7 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: siderBg }}>
       <Card className="w-full max-w-lg">
         <div className="flex flex-col gap-6">
           <div className="text-center">
