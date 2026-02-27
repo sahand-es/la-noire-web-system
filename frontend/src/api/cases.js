@@ -40,3 +40,26 @@ export function approveCase(caseId, action, message = "") {
 export function getCaseStatistics() {
   return get("cases/statistics/");
 }
+
+
+export const approveReleaseCase = async (caseId) => {
+  try {
+    const response = await fetch(`/cases/${caseId}/approve_and_release/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('authToken')}`,  // Ensure authentication token
+      },
+      body: JSON.stringify({ case_id: caseId }),
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      return data;  // Return the response data if success
+    } else {
+      throw new Error(data.error || "Error occurred");
+    }
+  } catch (error) {
+    throw new Error(error.message || "An error occurred while processing the request");
+  }
+};

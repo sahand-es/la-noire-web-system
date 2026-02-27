@@ -379,3 +379,31 @@ class CaseViewSet(viewsets.ModelViewSet):
             'status': 'success',
             'data': serializer.data
         })
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsSergeant])  # Ensuring only Sergeant can approve
+    def approve_and_release(self, request, pk=None):
+        case = get_object_or_404(Case, pk=pk)
+        
+        # Check if the case is LEVEL2 or LEVEL3
+        if case.case_priority not in ['LEVEL2', 'LEVEL3']:
+            return Response({"error": "Bail and fine release is not available for this case."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if Sergeant's approval is granted
+        if not case.sergeant_approval:
+            return Response({"error": "Sergeant approval is required for release."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Process the payment (this is where payment gateway logic is triggered)
+        payment_successful = self.process_payment(case.bail_amount or case.fine_amount)
+        
+        if payment_successful:
+            # Update the case status to "RELEASED"
+            case.status = 'RELEASED'
+            case.save()
+            return Response({"success": "Suspect released after payment."}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Payment failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def process_payment(self, amount):
+        # Implement your payment gateway integration here (e.g., Stripe)
+        # For this example, we simulate payment success
+        return True  # Simulating a successful payment

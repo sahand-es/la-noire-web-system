@@ -97,6 +97,16 @@ class Case(BaseModel):
         verbose_name="Notes"
     )
 
+    bail_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, 
+        validators=[MinValueValidator(0)], verbose_name="Bail Amount"
+    )
+    fine_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, 
+        validators=[MinValueValidator(0)], verbose_name="Fine Amount"
+    )
+    sergeant_approval = models.BooleanField(default=False, verbose_name="Sergeant Approval")
+
     class Meta:
         verbose_name = "Case"
         verbose_name_plural = "Cases"

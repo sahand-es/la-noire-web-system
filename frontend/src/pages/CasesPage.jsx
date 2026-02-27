@@ -72,7 +72,7 @@ export function CasesPage() {
 
   const roleNames = useMemo(
     () => (user?.roles || []).map((role) => role?.name).filter(Boolean),
-    [user],
+    [user]
   );
 
   const canCreateCrimeSceneCase = useMemo(() => {
@@ -118,11 +118,87 @@ export function CasesPage() {
   const isCaptain = roleNames.includes("Captain");
   const isPoliceChief = roleNames.includes("Police Chief");
 
-  const [guiltScoreModal, setGuiltScoreModal] = useState({ open: false, link: null, type: null }); // type: 'detective' | 'sergeant'
-  const [captainOpinionModal, setCaptainOpinionModal] = useState({ open: false, link: null });
+  const [guiltScoreModal, setGuiltScoreModal] = useState({
+    open: false,
+    link: null,
+    type: null,
+  }); // type: 'detective' | 'sergeant'
+  const [captainOpinionModal, setCaptainOpinionModal] = useState({
+    open: false,
+    link: null,
+  });
   const [guiltScoreForm] = Form.useForm();
   const [captainOpinionForm] = Form.useForm();
 
+  const handleApproveAndRelease = async (caseId) => {
+    try {
+      const response = await approveReleaseCase(caseId);  // Calls the API
+      if (response.success) {
+        message.success("Suspect released after payment.");
+        // Optionally, update the case status in the UI
+        fetchCases();  // Refresh the cases or manually update the status
+      } else {
+        message.error("Error: " + response.error);
+      }
+    } catch (error) {
+      message.error("An error occurred: " + error.message);
+    }
+  return (
+    <div>
+      {cases.map((link) => (
+        <Card key={link.id} title={link.case_title}>
+          <div className="case-details">
+            {/* Your other case details here */}
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span>
+                <Text type="secondary">Detective score:</Text>{" "}
+                {link.detective_guilt_score != null ? (
+                  link.detective_guilt_score
+                ) : (
+                  "—"
+                )}
+              </span>
+              <span>
+                <Text type="secondary">Sergeant score:</Text>{" "}
+                {link.sergeant_guilt_score != null ? (
+                  link.sergeant_guilt_score
+                ) : (
+                  "—"
+                )}
+              </span>
+
+              {/* Add button for Sergeants to approve and release */}
+              {link.case_priority === "LEVEL2" || link.case_priority === "LEVEL3" ? (
+                <Space>
+                  {link.sergeant_approval ? (
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={() => handleApproveAndRelease(link.id)}
+                      loading={suspectActionLinkId === link.id}
+                    >
+                      Approve and Release
+                    </Button>
+                  ) : (
+                    <Button
+                      size="small"
+                      danger
+                      onClick={() => handleApproveAndRelease(link.id)}
+                      loading={suspectActionLinkId === link.id}
+                    >
+                      Mark for Release (Pending Approval)
+                    </Button>
+                  )}
+                </Space>
+              ) : null}
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+  };
+  
   async function loadDetectives() {
     if (!canAssignDetective) return;
     setIsDetectivesLoading(true);
@@ -145,7 +221,7 @@ export function CasesPage() {
   async function fetchData(
     nextPage = page,
     nextPageSize = pageSize,
-    nextStatus = status,
+    nextStatus = status
   ) {
     setIsLoading(true);
     try {
@@ -243,10 +319,18 @@ export function CasesPage() {
     setSuspectActionLinkId(link.id);
     try {
       if (type === "detective") {
-        await detectiveAssessment(selected.id, link.id, { guilt_score: values.guilt_score });
+        await detectiveAssessment(
+          selected.id,
+          link.id,
+          { guilt_score: values.guilt_score }
+        );
         message.success("Detective guilt score recorded.");
       } else {
-        await sergeantAssessment(selected.id, link.id, { guilt_score: values.guilt_score });
+        await sergeantAssessment(
+          selected.id,
+          link.id,
+          { guilt_score: values.guilt_score }
+        );
         message.success("Sergeant guilt score recorded.");
       }
       setGuiltScoreModal({ open: false, link: null, type: null });
@@ -301,7 +385,7 @@ export function CasesPage() {
     try {
       const updatedCase = await assignCaseDetective(
         selected.id,
-        assignDetectiveId,
+        assignDetectiveId
       );
       message.success("Detective assigned successfully.");
       setSelected(updatedCase || selected);
