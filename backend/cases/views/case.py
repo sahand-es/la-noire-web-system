@@ -9,7 +9,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from cases.models import Case, CaseStatus
-from investigation.models import SuspectCaseLink
+from investigation.models import SuspectCaseLink, DetectiveReport
 from core.models import UserProfile
 from cases.serializers.case import (
     CaseListSerializer,
@@ -19,6 +19,13 @@ from cases.serializers.case import (
     CaseApprovalSerializer,
     CaseAssignDetectiveSerializer,
     CaseStatisticsSerializer
+)
+from cases.serializers.evidence import (
+    WitnessTestimonySerializer,
+    BiologicalEvidenceSerializer,
+    VehicleEvidenceSerializer,
+    DocumentEvidenceSerializer,
+    OtherEvidenceSerializer,
 )
 from accounts.permissions import (
     IsPoliceRankExceptCadet,
@@ -378,6 +385,118 @@ class CaseViewSet(viewsets.ModelViewSet):
         return Response({
             'status': 'success',
             'data': serializer.data
+        })
+
+    @action(detail=True, methods=['get'], url_path='report')
+    def report(self, request, pk=None):
+        case = get_object_or_404(Case, pk=pk)
+
+        can_view = request.user.is_superuser or request.user.has_any_role([
+            'Judge', 'Captain', 'Police Chief', 'Sergeant', 'Detective'
+        ])
+        if not can_view:
+            return Response(
+                {
+                    'status': 'error',
+                    'message': 'You do not have permission to view case reports.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        complaints = case.complaints.select_related('complainant').all()
+        complainants = [
+            {
+                'id': complaint.id,
+                'title': complaint.title,
+                'description': complaint.description,
+                'complainant': complaint.complainant.get_full_name(),
+                'complainant_name': complaint.complainant.get_full_name(),
+                'status': complaint.status,
+                'incident_date': complaint.incident_date,
+                'incident_location': complaint.incident_location,
+                'created_at': complaint.created_at,
+            }
+            for complaint in complaints
+        ]
+
+        testimonies = WitnessTestimonySerializer(
+            case.witnesstestimony_set.select_related('collected_by').all(),
+            many=True,
+        ).data
+
+        evidence = []
+        evidence.extend(BiologicalEvidenceSerializer(
+            case.biologicalevidence_set.select_related('collected_by').all(),
+            many=True,
+        ).data)
+        evidence.extend(VehicleEvidenceSerializer(
+            case.vehicleevidence_set.select_related('collected_by').all(),
+            many=True,
+        ).data)
+        evidence.extend(DocumentEvidenceSerializer(
+            case.documentevidence_set.select_related('collected_by').all(),
+            many=True,
+        ).data)
+        evidence.extend(OtherEvidenceSerializer(
+            case.otherevidence_set.select_related('collected_by').all(),
+            many=True,
+        ).data)
+
+        suspect_links = SuspectCaseLink.objects.filter(case=case).select_related('suspect')
+        suspects = [
+            {
+                'id': link.suspect.id,
+                'first_name': link.suspect.first_name,
+                'last_name': link.suspect.last_name,
+                'full_name': link.suspect.full_name,
+                'national_id': link.suspect.national_id,
+                'status': link.suspect.status,
+                'is_wanted': link.suspect.is_wanted,
+            }
+            for link in suspect_links
+        ]
+
+        detective_reports = [
+            {
+                'id': item.id,
+                'status': item.status,
+                'detective_message': item.detective_message,
+                'sergeant_message': item.sergeant_message,
+                'submitted_at': item.submitted_at,
+                'reviewed_at': item.reviewed_at,
+                'detective_name': item.detective.get_full_name() if item.detective else '-',
+                'sergeant_name': item.sergeant.get_full_name() if item.sergeant else '-',
+            }
+            for item in DetectiveReport.objects.filter(case=case)
+            .select_related('detective', 'sergeant')
+            .order_by('-submitted_at')
+        ]
+
+        def _staff_payload(user):
+            role_name = user.roles.filter(is_active=True).values_list('name', flat=True).first() or '-'
+            return {
+                'id': user.id,
+                'full_name': user.get_full_name(),
+                'username': user.username,
+                'role': role_name,
+            }
+
+        staff = []
+        if case.assigned_detective:
+            staff.append(_staff_payload(case.assigned_detective))
+        staff.extend(_staff_payload(member) for member in case.team_members.all())
+
+        return Response({
+            'status': 'success',
+            'data': {
+                'case': CaseDetailSerializer(case).data,
+                'complainants': complainants,
+                'testimonies': testimonies,
+                'evidence': evidence,
+                'suspects': suspects,
+                'staff': staff,
+                'detective_reports': detective_reports,
+            }
         })
     
     @action(detail=True, methods=['post'], permission_classes=[IsSergeant])  # Ensuring only Sergeant can approve

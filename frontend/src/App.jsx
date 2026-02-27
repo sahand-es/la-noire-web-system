@@ -159,7 +159,16 @@ function App() {
             element={<IntensivePursuitPage />}
           />
 
-          <Route path="reports" element={<ReportsPage />} />
+          <Route
+            path="reports"
+            element={
+              <RoleRoute
+                roles={["Detective", "Sergeant", "Judge", "Captain", "Police Chief"]}
+              >
+                <ReportsPage />
+              </RoleRoute>
+            }
+          />
           <Route path="trials" element={<TrialsPage />} />
           <Route path="approvals" element={<ApprovalsPage />} />
           <Route

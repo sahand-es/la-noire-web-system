@@ -86,7 +86,7 @@ function buildAppMenuItems(user) {
     items.push({ key: "/trials", icon: <AuditOutlined />, label: <Link to="/trials">Trials</Link> });
   }
 
-  if (hasAnyRole(user, ["Judge", "Sergeant", "Captain", "Police Chief"])) {
+  if (hasAnyRole(user, ["Detective", "Judge", "Sergeant", "Captain", "Police Chief"])) {
     items.push({ key: "/reports", icon: <FileTextOutlined />, label: <Link to="/reports">Reports</Link> });
   }
 

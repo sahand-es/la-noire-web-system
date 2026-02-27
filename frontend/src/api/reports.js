@@ -1,4 +1,4 @@
-import { get } from "./request";
+import { get, post } from "./request";
 
 export function listReportCases(params = {}) {
   const qs = new URLSearchParams();
@@ -12,4 +12,8 @@ export function getCaseReport(caseId) {
   // This assumes your backend has a report endpoint under cases.
   // If not, we will use case detail + evidence endpoints (fallback).
   return get(`cases/${caseId}/report/`);
+}
+
+export function writeCaseReport(caseId, body) {
+  return post(`cases/${caseId}/investigation/detective-reports/`, body);
 }
