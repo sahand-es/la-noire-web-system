@@ -28,6 +28,7 @@ export const deskLightTokens = {
 
 const siderBg = deskLightTokens.colorText
 const headerBg = deskLightTokens.colorText
+export { siderBg }
 export const siderTextColor = deskLightTokens.colorBgLayout
 export const siderTextSecondary = deskLightTokens.colorBorder
 
@@ -84,6 +85,8 @@ export const antdTheme = {
       darkItemBg: 'transparent',
       darkItemSelectedBg: 'rgba(245, 237, 228, 0.12)',
       darkItemHoverBg: 'rgba(245, 237, 228, 0.06)',
+      darkSubMenuItemBg: deskLightTokens.siderBg,
+      darkPopupBg: deskLightTokens.colorPrimary,
       itemColor: siderTextColor,
       itemSelectedColor: deskLightTokens.colorBgLayout,
       itemHoverColor: siderTextColor,
